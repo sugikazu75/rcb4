@@ -1,6 +1,9 @@
 import cstruct
 
 
+max_sensor_num = 24
+sensor_sidx = 38
+
 ServoStruct = cstruct.parse("""
 struct ServoStruct
 {
@@ -124,8 +127,37 @@ struct ImuData_t
 """)
 ImuData.__name__ = 'imu_data_'
 
+
+Madgwick = cstruct.parse("""
+struct Madgwick {
+  float beta;				// algorithm gain
+  float q0;
+  float q1;
+  float q2;
+  float q3;	// quaternion of sensor frame relative to auxiliary frame
+  float SampleFreq;
+  float invSampleFreq;
+  float roll;
+  float pitch;
+  float yaw;
+  float gyro_scale;
+  float acc[3];
+  float gyro[3];
+  float gyro_offset[3];
+  float mag[3];
+  uint32_t calib_cnt;
+  uint32_t calib_flag;
+  uint32_t anglesComputed;
+  float gyro_norm;
+  float gyro_norm_thleshold;
+}
+""")
+Madgwick.__name__ = 'Mfilter'
+
+
 c_vector = {
     'servo_vector': 36,
-    'Sensor_vector': 0,
+    'Sensor_vector': max_sensor_num,
     'imu_data_': 0,
+    'Mfilter': 1,
 }

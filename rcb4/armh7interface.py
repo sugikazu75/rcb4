@@ -15,6 +15,10 @@ from rcb4.rcb4interface import CommandTypes
 from rcb4.rcb4interface import rcb4_dof
 from rcb4.rcb4interface import ServoParams
 from rcb4.struct_header import c_vector
+from rcb4.struct_header import Madgwick
+from rcb4.struct_header import max_sensor_num
+from rcb4.struct_header import sensor_sidx
+from rcb4.struct_header import SensorbaseStruct
 from rcb4.struct_header import ServoStruct
 
 
@@ -23,6 +27,7 @@ armh7_variable_list = [
     "walking_mode",
     "rom_to_flash",
     "flash_to_rom",
+    'Mfilter',
     "set_sidata_command",
     "set_sdata_command",
     "set_edata_command",
@@ -104,6 +109,7 @@ class ARMH7Interface(object):
 
     def __init__(self):
         self.serial = None
+        self.id_vector = None
 
     def __del__(self):
         self.close()
@@ -238,6 +244,19 @@ class ARMH7Interface(object):
         b = self.serial_write(byte_list)
         return np.frombuffer(b, dtype=np.uint16)
 
+    def read_jointbase_sensor_ids(self):
+        if self.id_vector is None:
+            ret = []
+            for i in range(max_sensor_num):
+                sensor = self.memory_cstruct(
+                    SensorbaseStruct, i)
+                port = sensor.port
+                id = sensor.id
+                if port > 0 and id == (i + sensor_sidx) // 2:
+                    ret.append(i + sensor_sidx)
+            self.id_vector = list(reversed(ret))
+        return self.id_vector
+
     def reference_angle_vector(self):
         return self.read_cstruct_slot_v(
             ServoStruct, slot_name='ref_angle')
@@ -317,6 +336,19 @@ class ARMH7Interface(object):
         byte_list.insert(0, 2 + len(byte_list))
         byte_list.append(rcb4_checksum(byte_list))
         return self.serial_write(byte_list)
+
+    def read_quaternion(self):
+        cs = self.memory_cstruct(Madgwick, 0)
+        return np.array([cs.q0, cs.q1, cs.q2, cs.q3], dtype=np.float32)
+
+    def read_rpy(self):
+        cs = self.memory_cstruct(Madgwick, 0)
+        return [cs.roll, cs.pitch, cs.yaw]
+
+    def gyro_norm_vector(self):
+        g = self.memory_cstruct(Madgwick, 0).gyro
+        n = np.sqrt(g[0] ** 2 + g[1] ** 2 + g[2] ** 2)
+        return (n, g)
 
 
 if __name__ == '__main__':
