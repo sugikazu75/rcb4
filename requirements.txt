@@ -1,0 +1,4 @@
+cstruct
+gdown
+pyelftools
+pyserial
