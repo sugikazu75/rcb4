@@ -108,7 +108,7 @@ class ARMH7Interface(object):
     def __del__(self):
         self.close()
 
-    def open(self, port='/dev/ttyUSB0', baudrate=1000000, timeout=0.1):
+    def open(self, port='/dev/ttyUSB0', baudrate=1000000, timeout=0.01):
         """Opens a serial connection to the ARMH7 device.
 
         Parameters
@@ -118,7 +118,7 @@ class ARMH7Interface(object):
         baudrate : int
             The baud rate for the serial connection.
         timeout : float, optional
-            The timeout for the serial connection in seconds (default is 0.1).
+            The timeout for the serial connection in seconds (default is 0.01).
 
         Returns
         -------
@@ -155,11 +155,13 @@ class ARMH7Interface(object):
         if self.serial is None:
             raise RuntimeError('Serial is not opened.')
 
-        try:
-            ret = self.serial.read_until()
-        except serial.SerialException as e:
-            print(f"Error reading data: {e}")
-            return None
+        ret = ''
+        while len(ret) == 0:
+            try:
+                ret = self.serial.read_until()
+            except serial.SerialException as e:
+                print(f"Error reading data: {e}")
+                return None
 
         while len(ret) > 0 and ret[0] != len(ret):
             try:
