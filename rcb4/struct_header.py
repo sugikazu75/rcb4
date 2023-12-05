@@ -3,6 +3,7 @@ import cstruct
 
 max_sensor_num = 24
 sensor_sidx = 38
+max_wormmodule_num = max_sensor_num
 
 ServoStruct = cstruct.parse("""
 struct ServoStruct
@@ -155,9 +156,92 @@ struct Madgwick {
 Madgwick.__name__ = 'Mfilter'
 
 
+WormmoduleStruct = cstruct.parse("""
+struct WormmoduleStruct
+{
+  uint8_t module_type;//r/w 0:MODULE_NONE, 1:MODULE_ROTATE, 2:MODULE_LINEAR
+  uint8_t servo_id;//r/w same ID as rcb4robotconfig defined
+  uint8_t sensor_id;//r/w raw ID,, TODO: change reference
+  uint8_t move_state;//as same as servo
+  uint16_t magenc_init;
+  uint16_t magenc_present;
+  uint16_t magenc_ref;
+  uint16_t thleshold;//r magenc value scale
+  float ref_angle;//angle scale
+  float linear_upper_limit;//upper limit for linear module(ms)
+  float magenc_error;
+  float present_angle;//angle scale
+  float thleshold_scale;
+  float target_time;//ms
+  float timeout_time;//ms
+  float timeout_time_scale;
+  float estimated_speed;
+  float gear_ratio;
+  float move_time;//ms
+  float count_time;//ms
+  uint32_t start_frame;//ns
+  uint32_t prev_frame;//ns
+  uint8_t overflow_times;
+  uint8_t dummy[3];
+}; //1*4 + 2*4 + 4*14 + 4 = 72byte
+""")
+WormmoduleStruct.__name__ = 'Worm_vector'
+
+
+SystemStruct = cstruct.parse("""
+struct SystemStruct
+{
+  uint32_t cur_time;
+  uint32_t prev_time;
+  float dt;
+  float prev_dt;
+  uint8_t *rom_flash; // FLASH area for RCB4 ROM area requires 256KB
+  uint8_t *rom_memory; // FLASH area for RCB4 ROM area requires 256KB
+  uint16_t ad_value;
+  uint16_t servo_cnt;
+  float battery_voltage;
+  float battery_voltage_vref;
+  float vref;
+  float initial_battery_voltage;
+  float battery_voltage_percent;
+  uint8_t battery_cal_done;
+  uint8_t servo_current_read_flag;
+  uint8_t servo_temperature_read_flag;
+  uint8_t scan_mode;//0:normal, 1:simple
+  uint16_t temperature;
+  uint16_t buzzer_hz;
+  uint8_t battery_type;
+  uint8_t board_revision;
+  uint8_t ics_baudrate[6];
+  uint8_t ics_comm_stop[6]; // for handshake 6 UARTs param setting
+  uint32_t frame_time; // used for ICS comm cycle in uarttasks.c
+};
+""")
+SystemStruct.__name__ = 'SysB'
+
+
+DataAddress = cstruct.parse("""
+struct DataAddress
+{
+  uint8_t _sidata;
+  uint8_t _sdata;
+  uint8_t _edata;
+  uint32_t data_size;
+  uint8_t dataflash_address;
+  uint32_t src_addr;
+  uint32_t dst_addr;
+  uint32_t copy_size;
+};
+""")
+DataAddress.__name__ = 'data_address'
+
+
 c_vector = {
     'servo_vector': 36,
     'Sensor_vector': max_sensor_num,
     'imu_data_': 0,
     'Mfilter': 1,
+    'Worm_vector': max_wormmodule_num,
+    'SysB': 0,
+    'data_address': 0,
 }

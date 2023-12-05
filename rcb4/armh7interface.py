@@ -1,3 +1,5 @@
+import struct
+
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 import numpy as np
@@ -15,11 +17,13 @@ from rcb4.rcb4interface import CommandTypes
 from rcb4.rcb4interface import rcb4_dof
 from rcb4.rcb4interface import ServoParams
 from rcb4.struct_header import c_vector
+from rcb4.struct_header import DataAddress
 from rcb4.struct_header import Madgwick
 from rcb4.struct_header import max_sensor_num
 from rcb4.struct_header import sensor_sidx
 from rcb4.struct_header import SensorbaseStruct
 from rcb4.struct_header import ServoStruct
+from rcb4.struct_header import WormmoduleStruct
 
 
 armh7_variable_list = [
@@ -48,6 +52,9 @@ armh7_variable_list = [
     "servo_idmode_scan_single",
     'imu_data_',
     'Sensor_vector',
+    'Worm_vector',
+    'SysB',
+    'data_address',
 ]
 
 
@@ -105,16 +112,55 @@ servo_eeprom_params64 = {
 }
 
 
+def ctype_to_struct_format(c_type):
+    if c_type == ':integer':
+        return 'i'  # or 'I' for unsigned
+    elif c_type == ':byte':
+        return 'b'  # or 'B' for unsigned
+    elif c_type == ':short':
+        return 'h'  # or 'H' for unsigned
+    elif c_type == ':float':
+        return 'f'
+    elif c_type == ':double':
+        return 'd'
+    # Add more mappings as needed
+
+
+def slot_vector_from_str(byte_str, cls, slot_name):
+    length = c_vector[cls.__name__]
+    vec = [None] * length
+    cnt = 1
+    typ = cls.__fields_types__[slot_name].c_type
+    tsize = c_type_to_size(typ)
+    offset = cls.__fields_types__[slot_name].offset
+    esize = cls.__fields_types__[slot_name].c_type
+    fmt = ctype_to_struct_format(typ)
+    for i in range(length):
+        if cnt == 1:
+            v = struct.unpack_from(fmt, byte_str, offset + i * esize)[0]
+            vec[i] = v
+        else:
+            lst = []
+            for j in range(cnt):
+                v = struct.unpack_from(
+                    fmt, byte_str, offset + i * tsize + j * esize)[0]
+                lst.append(v)
+            vec[i] = lst
+    return vec
+
+
 class ARMH7Interface(object):
 
     def __init__(self):
         self.serial = None
         self.id_vector = None
+        self.servo_sorted_ids = None
+        self.worm_sorted_ids = None
 
     def __del__(self):
         self.close()
 
-    def open(self, port='/dev/ttyUSB0', baudrate=1000000, timeout=0.01):
+    def open(self, port='/dev/ttyUSB1', baudrate=1000000, timeout=0.01):
         """Opens a serial connection to the ARMH7 device.
 
         Parameters
@@ -225,16 +271,83 @@ class ARMH7Interface(object):
         buf = self.memory_read((size * v_idx) + addr, size)
         return cls(buf)
 
+    def memory_write(self, addr, length, data):
+        cnt = 1
+        e_size = length
+        skip_size = 0
+        n = length + 11
+        byte_list = bytearray(n)
+        byte_list[0] = n
+        byte_list[1] = 0xFC  # MWRITEV_OP
+        byte_list[2:6] = addr.to_bytes(4, byteorder='little')
+        byte_list[6] = cnt
+        byte_list[7] = e_size
+        byte_list[8:10] = skip_size.to_bytes(2, byteorder='little')
+        for i in range(length):
+            byte_list[10 + i] = data[i]
+        byte_list[10 + length] = rcb4_checksum(byte_list[0:n-1])
+        return self.serial_write(byte_list)
+
+    def cfunc_call(self, func_string, *args):
+        addr = armh7_elf_alist[func_string]
+        argc = len(*args)
+        n = 8 + 4 * argc
+        byte_list = bytearray(n)
+        byte_list[0] = n
+        byte_list[1] = 0xfa
+        byte_list[2:6] = addr.to_bytes(4, byteorder='little')
+        byte_list[6] = argc
+        for i in range(argc):
+            byte_list[7 + i * 4] = args[i].to_bytes(4, byteorder='little')
+        byte_list[n - 1] = rcb4_checksum(byte_list[0:n-1])
+        return self.serial_write(byte_list)
+
+    def write_cls_alist(self, cls, idx, slot_name, vec):
+        baseaddr = armh7_elf_alist[cls.__name__]
+        cls_size = cls.size
+        typ = cls.__fields_types__[slot_name].c_type
+        slot_size = c_type_to_size(typ)
+        slot_offset = cls.__fields_types__[slot_name].offset
+        cls.__fields_types__[slot_name].c_type
+        cnt = 1
+        addr = baseaddr + (idx * cls_size) + slot_offset
+        data = bytearray(slot_size)
+
+        if cnt == 1:
+            v = None
+            if isinstance(vec, list):
+                v = vec[0]
+            else:
+                v = vec
+            if typ == 'float':
+                byte_data = struct.pack('f', v)
+                byte_data = struct.unpack('4B', byte_data)
+            elif typ == 'uint16':
+                byte_data = struct.pack('H', v)
+                byte_data = struct.unpack('BB', byte_data)
+            elif typ == 'uint8':
+                # Unpacking a single byte.
+                byte_data = struct.pack('B', v)
+                byte_data = struct.unpack('B', byte_data)
+            else:
+                raise RuntimeError('not implemented typ {}'.format(typ))
+            data[0:len(byte_data)] = byte_data
+        else:
+            raise NotImplementedError
+        return self.memory_write(addr, slot_size, data)
+
     def read_cstruct_slot_v(self, cls, slot_name):
         vcnt = c_vector[cls.__name__]
         addr = armh7_elf_alist[cls.__name__]
         cls_size = cls.size
+        # import ipdb
+        # ipdb.set_trace()
         slot_offset = cls.__fields_types__[slot_name].offset
         element_size = c_type_to_size(cls.__fields_types__[slot_name].c_type)
         n = 11
         byte_list = np.zeros(n, dtype=np.uint8)
         byte_list[0] = n
-        byte_list[1] = 0xFB
+        byte_list[1] = 0xFB  # MREADV_OP
         byte_list[2:6] = np.array([(addr + slot_offset) >> (i * 8) & 0xff
                                    for i in range(4)], dtype=np.uint8)
         byte_list[6] = vcnt
@@ -254,7 +367,7 @@ class ARMH7Interface(object):
                 id = sensor.id
                 if port > 0 and id == (i + sensor_sidx) // 2:
                     ret.append(i + sensor_sidx)
-            self.id_vector = list(reversed(ret))
+            self.id_vector = list(sorted(ret))
         return self.id_vector
 
     def reference_angle_vector(self):
@@ -350,8 +463,229 @@ class ARMH7Interface(object):
         n = np.sqrt(g[0] ** 2 + g[1] ** 2 + g[2] ** 2)
         return (n, g)
 
+    def set_cstruct_slot(self, cls, idx, slot_name, v):
+        baseaddr = armh7_elf_alist[cls.__name__]
+        cls_size = cls.size
+        typ = cls.__fields_types__[slot_name].c_type
+        slot_size = c_type_to_size(typ)
+        slot_offset = cls.__fields_types__[slot_name].offset
+        cls.__fields_types__[slot_name].c_type
+        addr = baseaddr + (idx * cls_size) + slot_offset
+        bytes = bytearray(slot_size)
+
+        if typ == 'float':
+            byte_data = struct.pack('f', v)
+            byte_data = struct.unpack('4B', byte_data)
+        elif typ == 'uint16':
+            byte_data = struct.pack('H', v)
+            byte_data = struct.unpack('BB', byte_data)
+        elif typ == 'uint8':
+            byte_data = [v]
+        else:
+            raise RuntimeError('not implemented typ {}'.format(typ))
+        bytes[0:len(byte_data)] = byte_data
+        return self.memory_write(addr, slot_size, bytes)
+
+    def search_wheel_sids(self):
+        indices = []
+        for idx in self.servo_sorted_ids:
+            servo = self.memory_cstruct(ServoStruct, idx)
+            if servo.rotation > 0:
+                indices.append(idx)
+            if servo.feedback > 0:
+                self.set_cstruct_slot(ServoStruct, idx, 'feedback', 0)
+        self.wheel_servo_sorted_ids = sorted(indices)
+        return indices
+
+    def search_worm_ids(self):
+        indices = []
+        for idx in range(max_sensor_num):
+            worm = self.memory_cstruct(WormmoduleStruct, idx)
+            if worm.module_type == 1:
+                indices.append(idx)
+        self.worm_sorted_ids = indices
+        return indices
+
+    def read_worm_angle(self, idx=0):
+        if not 0 <= idx < max_sensor_num:
+            print(
+                f"Error: The worm servo index {idx} is out of the valid range."
+                " Please provide an index between 0 and {max_sensor_num - 1}.")
+        if self.worm_sorted_ids is None:
+            self.worm_sorted_ids = self.search_worm_ids()
+        if idx not in self.worm_sorted_ids:
+            print(
+                f"Error: The worm servo index {idx} is out of the valid range."
+                f" Valid indices are: {self.worm_sorted_ids}. "
+                'Please provide an index from this list.'
+            )
+        return self.memory_cstruct(WormmoduleStruct, idx).present_angle
+
+    def send_worm_angle_and_threshold(
+            self, worm_idx=0, angle=0, threshold=30, threshold_scale=1.0,
+            sign=1):
+        angle_lst = [angle]
+        th_lst = [threshold]
+        th_scale_lst = [threshold_scale]
+        if not 0 <= worm_idx < max_sensor_num:
+            print(f"invalid argument worm_idx={worm_idx}")
+        else:
+            worm = self.memory_cstruct(WormmoduleStruct, worm_idx)
+            self.write_cls_alist(WormmoduleStruct, worm_idx,
+                                 'ref_angle', angle_lst)
+            self.write_cls_alist(WormmoduleStruct, worm_idx,
+                                 'thleshold', th_lst)
+            self.write_cls_alist(WormmoduleStruct, worm_idx,
+                                 'thleshold_scale', th_scale_lst)
+            self.servo_angle_vector(
+                [worm.servo_id], [sign * 135 * 30 + 7500], velocity=10)
+            worm = self.memory_cstruct(WormmoduleStruct, worm_idx)
+            return worm
+
+    def send_worm_calib_data(
+            self, worm_idx, servo_idx=None, sensor_idx=None,
+            module_type=None, magenc_offset=None,
+            upper_limit=69.0, thleshold_scale=5.0,
+            timeout_time_scale=1.25, gear_ratio=20.0):
+        # Check for valid worm_idx
+        if not 0 <= worm_idx < max_sensor_num:
+            print(f"Invalid argument worm_idx={worm_idx}")
+            return
+
+        # Print the formatted information
+        print(f"send worm_idx: {worm_idx}, module_type: {module_type}"
+              f", servo_idx: {servo_idx} sensor_idx: {sensor_idx}")
+        print(f"magenc_offset: {magenc_offset}, upper_limit: {upper_limit}, "
+              f"thleshold_scale: {thleshold_scale}, "
+              f"timeout_time_scale: {timeout_time_scale}"
+              f", gear_ratio: {gear_ratio}")
+
+        # Write the parameters to the wormmodule vector cstruct
+        if module_type is not None:
+            self.write_cls_alist(
+                WormmoduleStruct, worm_idx, 'module_type', [module_type])
+        if servo_idx is not None:
+            self.write_cls_alist(
+                WormmoduleStruct, worm_idx, 'servo_id', [servo_idx])
+        if sensor_idx is not None:
+            self.write_cls_alist(
+                WormmoduleStruct, worm_idx, 'sensor_id', [sensor_idx])
+        self.write_cls_alist(WormmoduleStruct, worm_idx, 'move_state', [0])
+        if magenc_offset is not None:
+            self.write_cls_alist(WormmoduleStruct, worm_idx,
+                                 'magenc_init', [magenc_offset % (2 ** 14)])
+        if upper_limit is not None:
+            self.write_cls_alist(WormmoduleStruct, worm_idx,
+                                 'linear_upper_limit', [upper_limit])
+        if thleshold_scale is not None:
+            self.write_cls_alist(WormmoduleStruct, worm_idx,
+                                 'thleshold_scale', [thleshold_scale])
+        if timeout_time_scale is not None:
+            self.write_cls_alist(WormmoduleStruct, worm_idx,
+                                 'timeout_time_scale', [timeout_time_scale])
+        if gear_ratio is not None:
+            self.write_cls_alist(WormmoduleStruct, worm_idx, 'gear_ratio',
+                                 [gear_ratio])
+        return self.memory_cstruct(WormmoduleStruct, worm_idx)
+
+    def buzzer(self):
+        return self.cfunc_call('buzzer_init_sound', [])
+
+    def write_to_flash(self):
+        return self.cfunc_call('rom_to_flash', [])
+
+    def set_data_address(self):
+        self.set_sidata()
+        self.set_sdata()
+        self.set_edata()
+        self.set_data_size()
+
+    def set_sidata(self, sidata=None):
+        sidata = sidata or armh7_elf_alist['_sidata']
+        return self.cstruct_slot(DataAddress, '_sidata', sidata)
+
+    def set_sdata(self, sdata=None):
+        sdata = sdata or armh7_elf_alist['_sdata']
+        return self.cstruct_slot(DataAddress, '_sdata', sdata)
+
+    def set_edata(self, edata=None):
+        edata = edata or armh7_elf_alist['_edata']
+        return self.cstruct_slot(DataAddress, '_edata', edata)
+
+    def set_data_size(self, sdata=None, edata=None):
+        sdata = sdata or armh7_elf_alist['_sdata']
+        edata = edata or armh7_elf_alist['uwTickPrio']
+        return self.cstruct_slot(DataAddress, 'data_size', edata - sdata)
+
+    def cstruct_slot(self, cls, slot_name, v=None):
+        if v is not None:
+            return self.write_cstruct_slot_v(cls, slot_name, v)
+        return self.read_cstruct_slot_v(cls, slot_name)
+
+    def write_cstruct_slot_v(self, cls, slot_name, vec):
+        vcnt = c_vector[cls.__name__]
+        addr = armh7_elf_alist[cls.__name__]
+        skip_size = cls.size
+        cnt = 1
+        typ = cls.__fields_types__[slot_name].c_type
+        tsize = c_type_to_size(typ)
+        offset = cls.__fields_types__[slot_name].offset
+        esize = cls.__fields_types__[slot_name].c_type
+
+        n = 11 + tsize * vcnt
+        if n > 240:
+            print(f"n={n} should be less than 240")
+            return
+
+        byte_list = bytearray(n)
+        byte_list[0] = n
+        byte_list[1] = 0xFC  # MWRITEV_OP
+        struct.pack_into('I', byte_list, 2, addr + offset)
+        byte_list[6] = vcnt
+        byte_list[7] = tsize
+        struct.pack_into('H', byte_list, 8, skip_size)
+
+        for i in range(vcnt):
+            if cnt == 1:
+                v = vec[i]
+                if not isinstance(v, (int, float)):
+                    v = v[0] if len(v) > 1 else v
+                if typ in (':integer', ':byte', ':short'):
+                    v = round(v)
+                if typ in (':float', ':double'):
+                    struct.pack_into('f', byte_list, 10 + i * esize, v)
+                else:
+                    struct.pack_into('I', byte_list, 10 + i * esize, v)
+            else:
+                for j in range(cnt):
+                    v = vec[i][j]
+                    if typ in (':integer', ':byte', ':short'):
+                        v = round(v)
+                    if typ in (':float', ':double'):
+                        struct.pack_into('f', byte_list,
+                                         10 + i * tsize + j * esize, v)
+                    else:
+                        struct.pack_into('I', byte_list,
+                                         10 + i * tsize + j * esize, v)
+
+        byte_list[n - 1] = rcb4_checksum(byte_list)
+        s = self.serial_write(byte_list)
+        return slot_vector_from_str(s, cls, slot_name)
+
+    def read_jb_cstruct(self, idx):
+        return self.memory_cstruct(
+            SensorbaseStruct, idx - sensor_sidx)
+
+    def all_jointbase_sensors(self):
+        if self.id_vector is None:
+            self.read_jointbase_sensor_ids()
+        return [self.read_jb_cstruct(idx)
+                for idx in self.id_vector]
+
 
 if __name__ == '__main__':
     interface = ARMH7Interface()
     print(interface.open())
     indices = interface.search_servo_ids()
+    worm_indices = interface.search_worm_ids()
+    interface.search_wheel_sids()
