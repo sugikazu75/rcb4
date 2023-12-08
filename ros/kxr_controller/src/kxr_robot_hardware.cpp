@@ -9,11 +9,22 @@ namespace kxr_controller {
   bool KXRRobotHW::init(ros::NodeHandle& root_nh, ros::NodeHandle& robot_hw_nh) {
     std::string model_str;
     ros::Rate rate(0.2);
+    std::string clean_namespace;
     while (ros::ok()) {
-      if (root_nh.getParam("robot_description", model_str)) {
+      std::string full_namespace = robot_hw_nh.getNamespace();
+      size_t last_slash_pos = full_namespace.find_last_of("/");
+      clean_namespace = full_namespace.substr(0, last_slash_pos);
+      if (last_slash_pos != std::string::npos) {
+        clean_namespace = full_namespace.substr(0, last_slash_pos);
+      }
+
+      std::string param_name = clean_namespace.empty() ? "/robot_description" : clean_namespace + "/robot_description";
+
+      if (robot_hw_nh.getParam(param_name, model_str)) {
         break;
       }
-      ROS_WARN("Failed to get model from robot_description. Could you set /robot_description ros param? You can check it `rosparam get /robot_description`");
+
+      ROS_WARN_STREAM("Failed to get model from " << param_name << ". Could you set " << param_name << " ros param? You can check it with `rosparam get " << param_name << "`");
       rate.sleep();
     }
 
@@ -48,13 +59,13 @@ namespace kxr_controller {
     registerInterface(&joint_state_interface);
     registerInterface(&joint_position_interface);
 
-    joint_state_sub_ = nh_.subscribe<sensor_msgs::JointState>("current_joint_states", 10, &KXRRobotHW::jointStateCallback, this);
-    joint_command_pub_ = nh_.advertise<sensor_msgs::JointState>("command_joint_state", 10);
+    joint_state_sub_ = nh_.subscribe<sensor_msgs::JointState>(clean_namespace + "/current_joint_states", 10, &KXRRobotHW::jointStateCallback, this);
+    joint_command_pub_ = nh_.advertise<sensor_msgs::JointState>(clean_namespace + "/command_joint_state", 10);
 
     ROS_INFO("Waiting for action server to start.");
-    servo_on_off_action_server_ = std::make_shared<ServoOnOffActionServer>(robot_hw_nh, "/kxr_fullbody_controller/servo_on_off",
+    servo_on_off_action_server_ = std::make_shared<ServoOnOffActionServer>(robot_hw_nh, clean_namespace + "/kxr_fullbody_controller/servo_on_off",
                                                                            boost::bind(&KXRRobotHW::execute_servo_on_off_callback, this, _1), false);
-    servo_on_off_action_client_ = std::make_shared<ServoOnOffClient>("/kxr_fullbody_controller/servo_on_off_real_interface", true);
+    servo_on_off_action_client_ = std::make_shared<ServoOnOffClient>(clean_namespace + "/kxr_fullbody_controller/servo_on_off_real_interface", true);
     servo_on_off_action_client_->waitForServer();
     servo_on_off_action_server_->start();
     ROS_INFO("Action server started, client can send goal.");
