@@ -1,0 +1,86 @@
+<launch>
+
+  <arg name="port" default="/dev/ttyUSB0" />
+  <arg name="urdf_path" value="$(find kxr_models)/urdf/kxrl2l2a6h2m.urdf" />
+  <arg name="servo_config_path" value="$(find kxr_models)/config/kxrl2l2a6h2m_servo_config.yaml" />
+  <arg name="namespace" default="" />
+
+  <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
+    <node name="rcb4_ros_bridge"
+          pkg="kxr_controller" type="rcb4_ros_bridge.py"
+          clear_params="true"
+          output="screen"
+          required="true" >
+      <rosparam subst_value="true" >
+        port: $(arg port)
+        urdf_path: $(arg urdf_path)
+        servo_config_path: $(arg servo_config_path)
+      </rosparam>
+    </node>
+
+    <node name="robot_state_publisher"
+          pkg="robot_state_publisher" type="robot_state_publisher"
+          clear_params="true"
+          respawn="true" >
+      <remap from="joint_states" to="joint_states" />
+      <rosparam subst_value="true" >
+        tf_prefix: $(arg namespace)
+      </rosparam>
+    </node>
+
+    <node name="kxr_controller"
+          pkg="kxr_controller"
+          type="kxr_controller"
+          clear_params="true"
+          respawn="true" output="screen">
+      <rosparam>
+      </rosparam>
+    </node>
+
+    <node name="controller_spawner"
+          pkg="controller_manager" type="spawner"
+          clear_params="true"
+          args="joint_state_controller kxr_fullbody_controller" >
+    </node>
+  </group>
+
+  <group unless="$(eval len(arg('namespace')) > 0)">
+    <node name="rcb4_ros_bridge"
+          pkg="kxr_controller" type="rcb4_ros_bridge.py"
+          clear_params="true"
+          output="screen"
+          required="true" >
+      <rosparam subst_value="true" >
+        port: $(arg port)
+        urdf_path: $(arg urdf_path)
+        servo_config_path: $(arg servo_config_path)
+      </rosparam>
+    </node>
+
+    <node name="robot_state_publisher"
+          pkg="robot_state_publisher" type="robot_state_publisher"
+          clear_params="true"
+          respawn="true" >
+      <remap from="joint_states" to="joint_states" />
+      <rosparam subst_value="true" >
+      </rosparam>
+    </node>
+
+    <node name="kxr_controller"
+          pkg="kxr_controller"
+          type="kxr_controller"
+          clear_params="true"
+          respawn="true" output="screen">
+      <rosparam>
+      </rosparam>
+    </node>
+
+    <node name="controller_spawner"
+          pkg="controller_manager" type="spawner"
+          clear_params="true"
+          args="joint_state_controller kxr_fullbody_controller" >
+    </node>
+  </group>
+
+
+</launch>
