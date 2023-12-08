@@ -1,4 +1,5 @@
 import struct
+import time
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
@@ -156,6 +157,8 @@ class ARMH7Interface(object):
         self.id_vector = None
         self.servo_sorted_ids = None
         self.worm_sorted_ids = None
+        self._joint_to_actuator_matrix = None
+        self._actuator_to_joint_matrix = None
 
     def __del__(self):
         self.close()
@@ -186,6 +189,7 @@ class ARMH7Interface(object):
             print(f"Opened {port} at {baudrate} baud")
         except serial.SerialException as e:
             print(f"Error opening serial port: {e}")
+            raise serial.SerialException(e)
         return self.check_ack()
 
     def close(self):
@@ -203,24 +207,32 @@ class ARMH7Interface(object):
             print(f"Error sending data: {e}")
         return self.serial_read()
 
-    def serial_read(self):
+    def serial_read(self, timeout=10):
         if self.serial is None:
             raise RuntimeError('Serial is not opened.')
 
+        start_time = time.time()
         ret = ''
         while len(ret) == 0:
+            # Check if the timeout has been exceeded
+            if time.time() - start_time > timeout:
+                raise serial.SerialException("Timeout: No data received.")
+
             try:
                 ret = self.serial.read_until()
             except serial.SerialException as e:
-                print(f"Error reading data: {e}")
-                return None
+                raise serial.SerialException(f"Error reading data: {e}")
 
         while len(ret) > 0 and ret[0] != len(ret):
+            # Check if the timeout has been exceeded
+            if time.time() - start_time > timeout:
+                raise serial.SerialException(
+                    "Timeout: Incomplete data received.")
+
             try:
                 ret += self.serial.read_until()
             except serial.SerialException as e:
-                print(f"Error reading data: {e}")
-                return None
+                raise serial.SerialException(f"Error reading data: {e}")
         return ret[1:len(ret) - 1]
 
     def get_ack(self):
@@ -374,11 +386,29 @@ class ARMH7Interface(object):
         return self.read_cstruct_slot_v(
             ServoStruct, slot_name='ref_angle')
 
-    def angle_vector(self):
+    def servo_id_to_index(self, servo_ids=None):
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        return {id: i
+                for i, id in enumerate(servo_ids)}
+
+    def _angle_vector(self):
         return self.read_cstruct_slot_v(ServoStruct,
                                         slot_name='current_angle')
 
+    def angle_vector(self):
+        servo_ids = self.search_servo_ids()
+        av = np.append(self._angle_vector()[servo_ids], 1)
+        av = np.matmul(av.T, self.actuator_to_joint_matrix.T)[:-1]
+        id_to_index = self.servo_id_to_index(servo_ids)
+        for idx in self.search_worm_ids():
+            worm = self.memory_cstruct(WormmoduleStruct, idx)
+            av[id_to_index[worm.servo_id]] = worm.present_angle
+        return av
+
     def search_servo_ids(self):
+        if self.servo_sorted_ids is not None:
+            return self.servo_sorted_ids
         indices = []
         for idx in range(rcb4_dof):
             servo = self.memory_cstruct(ServoStruct, idx)
@@ -498,6 +528,8 @@ class ARMH7Interface(object):
         return indices
 
     def search_worm_ids(self):
+        if self.worm_sorted_ids is not None:
+            return self.worm_sorted_ids
         indices = []
         for idx in range(max_sensor_num):
             worm = self.memory_cstruct(WormmoduleStruct, idx)
@@ -537,8 +569,8 @@ class ARMH7Interface(object):
                                  'thleshold', th_lst)
             self.write_cls_alist(WormmoduleStruct, worm_idx,
                                  'thleshold_scale', th_scale_lst)
-            self.servo_angle_vector(
-                [worm.servo_id], [sign * 135 * 30 + 7500], velocity=10)
+            # self.servo_angle_vector(
+            #     [worm.servo_id], [sign * 135 * 30 + 7500], velocity=10)
             worm = self.memory_cstruct(WormmoduleStruct, worm_idx)
             return worm
 
@@ -682,10 +714,36 @@ class ARMH7Interface(object):
         return [self.read_jb_cstruct(idx)
                 for idx in self.id_vector]
 
+    @property
+    def joint_to_actuator_matrix(self):
+        if self._joint_to_actuator_matrix is None:
+            servo_ids = self.search_servo_ids()
+            servo_length = len(servo_ids)
+            self._joint_to_actuator_matrix = np.zeros(
+                (servo_length + 1, servo_length + 1), dtype=np.float32)
+            self._joint_to_actuator_matrix[:, servo_length] = 7500
+            self._joint_to_actuator_matrix[servo_length, servo_length] = 1
+            for i in range(servo_length):
+                self._joint_to_actuator_matrix[i, i] = 30
+        return self._joint_to_actuator_matrix
+
+    @property
+    def actuator_to_joint_matrix(self):
+        if self._actuator_to_joint_matrix is None:
+            self._actuator_to_joint_matrix = np.linalg.inv(
+                self.joint_to_actuator_matrix)
+        return self._actuator_to_joint_matrix
+
+    def servo_states(self):
+        servo_on_indices = np.where(self.reference_angle_vector() != 32768)[0]
+        if len(servo_on_indices) > 0:
+            return servo_on_indices
+        return []
+
 
 if __name__ == '__main__':
     interface = ARMH7Interface()
-    print(interface.open())
+    print(interface.open('/dev/ttyUSB0'))
     indices = interface.search_servo_ids()
     worm_indices = interface.search_worm_ids()
     interface.search_wheel_sids()
