@@ -35,11 +35,6 @@
       </rosparam>
     </node>
 
-    <node name="controller_spawner"
-          pkg="controller_manager" type="spawner"
-          clear_params="true"
-          args="joint_state_controller kxr_fullbody_controller" >
-    </node>
   </group>
 
   <group unless="$(eval len(arg('namespace')) > 0)">
@@ -71,13 +66,6 @@
       <rosparam>
       </rosparam>
     </node>
-
-    <node name="controller_spawner"
-          pkg="controller_manager" type="spawner"
-          clear_params="true"
-          args="joint_state_controller kxr_fullbody_controller" >
-    </node>
   </group>
-
 
 </launch>

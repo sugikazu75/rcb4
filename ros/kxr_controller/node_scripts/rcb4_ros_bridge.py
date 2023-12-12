@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+import os
 import os.path as osp
+import subprocess
+import sys
 from threading import Lock
 
 import actionlib
@@ -132,8 +135,17 @@ class RCB4ROSBridge(object):
             clean_namespace
             + '/kxr_fullbody_controller/servo_on_off_real_interface',
             ServoOnOffAction,
-            execute_cb=self.servo_on_off_callback)
+            execute_cb=self.servo_on_off_callback,
+            auto_start=False)
         self.servo_on_off_server.start()
+
+        self.proc_app = subprocess.Popen(
+            ['/opt/ros/{0}/bin/rosrun'.format(os.environ['ROS_DISTRO']),
+             'controller_manager', 'spawner']
+            + ['joint_state_controller', 'kxr_fullbody_controller'],
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            shell=True)
 
     def command_joint_state_callback(self, msg):
         servo_ids = []
