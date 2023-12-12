@@ -2,8 +2,8 @@
 
 import os
 import os.path as osp
+import shlex
 import subprocess
-import sys
 from threading import Lock
 
 import actionlib
@@ -40,6 +40,16 @@ def load_yaml(file_path, Loader=yaml.SafeLoader):
     with open(osp.expanduser(file_path), 'r') as f:
         data = yaml.load(f, Loader=Loader)
     return data
+
+
+def run_robot_state_publisher(namespace=None):
+    command = f'/opt/ros/{os.environ["ROS_DISTRO"]}/bin/rosrun'
+    command += " robot_state_publisher robot_state_publisher"
+    if namespace is not None:
+        command += f" _tf_prefix:={namespace}"
+    command = shlex.split(command)
+    process = subprocess.Popen(command)
+    return process
 
 
 def set_fullbody_controller(joint_names):
@@ -139,13 +149,12 @@ class RCB4ROSBridge(object):
             auto_start=False)
         self.servo_on_off_server.start()
 
-        self.proc_app = subprocess.Popen(
-            ['/opt/ros/{0}/bin/rosrun'.format(os.environ['ROS_DISTRO']),
+        self.proc_controller_spawner = subprocess.Popen(
+            [f'/opt/ros/{os.environ["ROS_DISTRO"]}/bin/rosrun',
              'controller_manager', 'spawner']
-            + ['joint_state_controller', 'kxr_fullbody_controller'],
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-            shell=True)
+            + ['joint_state_controller', 'kxr_fullbody_controller'])
+        self.proc_robot_state_publisher = run_robot_state_publisher(
+            clean_namespace)
 
     def command_joint_state_callback(self, msg):
         servo_ids = []

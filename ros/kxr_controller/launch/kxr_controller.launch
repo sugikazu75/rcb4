@@ -16,16 +16,6 @@
       </rosparam>
     </node>
 
-    <node name="robot_state_publisher"
-          pkg="robot_state_publisher" type="robot_state_publisher"
-          clear_params="true"
-          respawn="true" >
-      <remap from="joint_states" to="joint_states" />
-      <rosparam subst_value="true" >
-        tf_prefix: $(arg namespace)
-      </rosparam>
-    </node>
-
     <node name="kxr_controller"
           pkg="kxr_controller"
           type="kxr_controller"
@@ -46,15 +36,6 @@
       <rosparam subst_value="true" >
         urdf_path: $(arg urdf_path)
         servo_config_path: $(arg servo_config_path)
-      </rosparam>
-    </node>
-
-    <node name="robot_state_publisher"
-          pkg="robot_state_publisher" type="robot_state_publisher"
-          clear_params="true"
-          respawn="true" >
-      <remap from="joint_states" to="joint_states" />
-      <rosparam subst_value="true" >
       </rosparam>
     </node>
 
