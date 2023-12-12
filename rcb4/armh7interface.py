@@ -1,3 +1,4 @@
+import platform
 import struct
 import time
 
@@ -5,6 +6,7 @@ from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 import numpy as np
 import serial
+import serial.tools.list_ports
 
 from rcb4.asm import four_bit_to_num
 from rcb4.asm import rcb4_checksum
@@ -191,6 +193,20 @@ class ARMH7Interface(object):
             print(f"Error opening serial port: {e}")
             raise serial.SerialException(e)
         return self.check_ack()
+
+    def auto_open(self):
+        system_info = platform.uname()
+        if 'amlogic' in system_info.version \
+           and system_info.machine == 'aarch64':
+            # for radxa specific.
+            return self.open('/dev/ttyAML1')
+
+        vendor_id = 0x0403
+        product_id = 0x6001
+        ports = serial.tools.list_ports.comports()
+        for port in ports:
+            if port.vid == vendor_id and port.pid == product_id:
+                return self.open(port=port.device)
 
     def close(self):
         if self.serial:
@@ -743,7 +759,7 @@ class ARMH7Interface(object):
 
 if __name__ == '__main__':
     interface = ARMH7Interface()
-    print(interface.open('/dev/ttyUSB0'))
+    print(interface.auto_open())
     indices = interface.search_servo_ids()
     worm_indices = interface.search_worm_ids()
     interface.search_wheel_sids()
