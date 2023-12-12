@@ -61,25 +61,15 @@ armh7_variable_list = [
 ]
 
 
-def get_func_address(path, name):
-    address = None
-    with open(path, 'rb') as stream:
-        elf = ELFFile(stream)
-        for section in elf.iter_sections():
-            if isinstance(section, SymbolTableSection):
-                for symbol in section.iter_symbols():
-                    if symbol.name == name:
-                        address = symbol.entry['st_value']
-                        break
-            if address:
-                break
-        else:
-            raise RuntimeError('Failed to find {}'.format(name))
-    return address
-
-
-armh7_elf_alist = {name: get_func_address(kondoh7_elf(), name)
-                   for name in armh7_variable_list}
+armh7_elf_alist = {name: "" for name in armh7_variable_list}
+with open(kondoh7_elf(), 'rb') as stream:
+    elf = ELFFile(stream)
+    for section in elf.iter_sections():
+        if isinstance(section, SymbolTableSection):
+            for symbol in section.iter_symbols():
+                if symbol.name in armh7_elf_alist:
+                    address = symbol.entry['st_value']
+                    armh7_elf_alist[symbol.name] = address
 
 servo_eeprom_params64 = {
     'fix_header': (1, 2),
