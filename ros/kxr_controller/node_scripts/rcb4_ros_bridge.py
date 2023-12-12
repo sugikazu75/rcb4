@@ -13,6 +13,7 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import JointState
 from skrobot.model import RobotModel
+from skrobot.utils.urdf import no_mesh_load_mode
 import yaml
 
 from rcb4.armh7interface import ARMH7Interface
@@ -80,7 +81,8 @@ class RCB4ROSBridge(object):
         r = RobotModel()
         urdf_path = rospy.get_param('~urdf_path')
         with open(urdf_path) as f:
-            r.load_urdf_file(f)
+            with no_mesh_load_mode():
+                r.load_urdf_file(f)
 
         servo_config_path = rospy.get_param('~servo_config_path')
         self.joint_name_to_id = load_yaml(servo_config_path)[
