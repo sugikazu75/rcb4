@@ -92,10 +92,9 @@ class RCB4ROSBridge(object):
             JointState,
             queue_size=1)
 
-        self.port = rospy.get_param('~port', '/dev/ttyUSB0')
         self.arm = ARMH7Interface()
         arm = self.arm
-        arm.open(self.port)
+        arm.auto_open()
         arm.search_servo_ids()
         arm.search_worm_ids()
         arm.search_wheel_sids()
