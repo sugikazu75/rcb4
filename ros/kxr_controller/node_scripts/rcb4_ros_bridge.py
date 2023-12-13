@@ -117,9 +117,7 @@ class RCB4ROSBridge(object):
         arm.send_stretch(40)
 
         self.id_to_index = self.arm.servo_id_to_index()
-
-        for idx in arm.worm_sorted_ids:
-            arm.send_worm_calib_data(idx)
+        self.servo_id_to_worm_id = self.arm.servo_id_to_worm_id
 
         self.joint_servo_on = {jn: False for jn in self.joint_names}
         servo_on_states = arm.servo_states()
@@ -129,10 +127,8 @@ class RCB4ROSBridge(object):
                 self.joint_servo_on[jn] = True
             else:
                 self.joint_servo_on[jn] = False
-
-        for idx in arm.worm_sorted_ids:
-            arm.send_worm_calib_data(idx)
-            arm.send_worm_angle_and_threshold(idx, 0)
+        print(self.joint_servo_on)
+        print(self.id_to_index)
 
         self.worm_servo_ids = [
             arm.memory_cstruct(WormmoduleStruct, idx).servo_id
@@ -163,6 +159,8 @@ class RCB4ROSBridge(object):
         av_length = len(self.arm.servo_sorted_ids)
         svs = np.zeros(av_length)
         valid_indices = []
+        worm_av = []
+        worm_indices = []
         for name, angle in zip(msg.name, msg.position):
             if name not in self.joint_name_to_id:
                 continue
@@ -172,16 +170,20 @@ class RCB4ROSBridge(object):
             idx = self.joint_name_to_id[name]
 
             # should ignore duplicated index.
+            if idx not in self.id_to_index:
+                continue
             if self.id_to_index[idx] in valid_indices:
                 continue
 
             angle = np.rad2deg(angle)
             if idx in self.worm_servo_ids:
+                worm_idx = self.servo_id_to_worm_id[idx]
+                worm_av.append(angle)
+                worm_indices.append(worm_idx)
                 angle = 135
-            else:
-                svs[self.id_to_index[idx]] = angle
-                valid_indices.append(self.id_to_index[idx])
-                servo_ids.append(idx)
+            svs[self.id_to_index[idx]] = angle
+            valid_indices.append(self.id_to_index[idx])
+            servo_ids.append(idx)
         tmp_av = np.ones(av_length + 1)
         if len(valid_indices) == 0:
             return
@@ -194,8 +196,13 @@ class RCB4ROSBridge(object):
         indices = np.argsort(servo_ids)
         svs = svs[indices]
         servo_ids = np.array(servo_ids)[indices]
-
         with self.lock:
+            if len(worm_indices) > 0:
+                worm_av_tmp = np.array(self.arm.read_cstruct_slot_vector(
+                    WormmoduleStruct, 'ref_angle'), dtype=np.float32)
+                worm_av_tmp[np.array(worm_indices)] = np.array(worm_av)
+                self.arm.write_cstruct_slot_v(
+                    WormmoduleStruct, 'ref_angle', worm_av_tmp)
             self.arm.servo_angle_vector(servo_ids, svs, velocity=0)
 
     def servo_on_off_callback(self, goal):
@@ -217,15 +224,15 @@ class RCB4ROSBridge(object):
         servo_vector = servo_vector[indices]
         servo_ids = np.array(servo_ids)[indices]
         with self.lock:
-            self.arm.servo_angle_vector(servo_ids, servo_vector, velocity=0)
+            self.arm.servo_angle_vector(servo_ids, servo_vector, velocity=10)
         return self.servo_on_off_server.set_succeeded(ServoOnOffResult())
 
     def run(self):
         rate = rospy.Rate(100)
+
         while not rospy.is_shutdown():
             with self.lock:
                 av = self.arm.angle_vector()
-
             msg = JointState()
             msg.header.stamp = rospy.Time.now()
             for name in self.joint_names:
