@@ -59,8 +59,8 @@ namespace kxr_controller {
     registerInterface(&joint_state_interface);
     registerInterface(&joint_position_interface);
 
-    joint_state_sub_ = nh_.subscribe<sensor_msgs::JointState>(clean_namespace + "/current_joint_states", 10, &KXRRobotHW::jointStateCallback, this);
-    joint_command_pub_ = nh_.advertise<sensor_msgs::JointState>(clean_namespace + "/command_joint_state", 10);
+    joint_state_sub_ = nh_.subscribe<sensor_msgs::JointState>(clean_namespace + "/current_joint_states", 1, &KXRRobotHW::jointStateCallback, this);
+    joint_command_pub_ = nh_.advertise<sensor_msgs::JointState>(clean_namespace + "/command_joint_state", 1);
 
     ROS_INFO("Waiting for action server to start.");
     servo_on_off_action_server_ = std::make_shared<ServoOnOffActionServer>(robot_hw_nh, clean_namespace + "/kxr_fullbody_controller/servo_on_off",
