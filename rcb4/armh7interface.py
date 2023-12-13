@@ -662,9 +662,10 @@ class ARMH7Interface(object):
         skip_size = cls.size
         cnt = 1
         typ = cls.__fields_types__[slot_name].c_type
-        tsize = c_type_to_size(typ)
+        esize = c_type_to_size(typ)
         offset = cls.__fields_types__[slot_name].offset
-        esize = cls.__fields_types__[slot_name].c_type
+        c_type = cls.__fields_types__[slot_name].c_type
+        tsize = cnt * esize
 
         n = 11 + tsize * vcnt
         if n > 240:
@@ -681,17 +682,21 @@ class ARMH7Interface(object):
 
         for i in range(vcnt):
             if cnt == 1:
-                if isinstance(vec, list) or isinstance(vec, tuple):
-                    v = vec[i]
+                if isinstance(vec, list) or isinstance(vec, tuple)\
+                   or isinstance(vec, np.ndarray):
+                    if isinstance(vec, np.ndarray):
+                        v = float(vec[i])
+                    else:
+                        v = vec[i]
                 else:
                     v = vec
                 if not isinstance(v, (int, float)):
                     v = v[0] if len(v) > 1 else v
                 if typ in ('uint8', 'uint16', 'uint32'):
                     v = round(v)
-                    struct.pack_into('I', byte_list, 10 + i * tsize, v)
+                    struct.pack_into('I', byte_list, 10 + i * esize, v)
                 elif typ in ('float', 'double'):
-                    struct.pack_into('<f', byte_list, 10 + i * tsize, v)
+                    struct.pack_into('<f', byte_list, 10 + i * esize, v)
                 else:
                     raise RuntimeError(
                         'Not implemented case for typ {}'.format(typ))
@@ -710,7 +715,7 @@ class ARMH7Interface(object):
         byte_list[n - 1] = rcb4_checksum(byte_list)
         s = self.serial_write(byte_list)
         s = padding_bytearray(s, tsize)
-        return np.frombuffer(s, dtype=cls.__fields_types__[slot_name].c_type)
+        return np.frombuffer(s, dtype=c_type_to_numpy_format(c_type))
 
     def read_jb_cstruct(self, idx):
         return self.memory_cstruct(
