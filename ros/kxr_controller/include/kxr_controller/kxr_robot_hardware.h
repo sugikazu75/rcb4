@@ -22,7 +22,7 @@ namespace kxr_controller {
     virtual bool init(ros::NodeHandle& root_nh, ros::NodeHandle& robot_hw_nh);
 
     ros::Duration getPeriod() const {
-            return ros::Duration(0.08);
+            return ros::Duration(0.001);
     }
     ros::Time getTime() const { return ros::Time::now(); }
 
