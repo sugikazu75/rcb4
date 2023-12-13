@@ -223,11 +223,11 @@ SystemStruct.__name__ = 'SysB'
 DataAddress = cstruct.parse("""
 struct DataAddress
 {
-  uint8_t _sidata;
-  uint8_t _sdata;
-  uint8_t _edata;
+  uint32_t _sidata;
+  uint32_t _sdata;
+  uint32_t _edata;
   uint32_t data_size;
-  uint8_t dataflash_address;
+  uint32_t dataflash_address;
   uint32_t src_addr;
   uint32_t dst_addr;
   uint32_t copy_size;
