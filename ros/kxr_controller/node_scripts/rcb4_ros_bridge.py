@@ -237,10 +237,12 @@ class RCB4ROSBridge(object):
             msg.header.stamp = rospy.Time.now()
             for name in self.joint_names:
                 if name in self.joint_name_to_id:
-                    msg.position.append(
-                        np.deg2rad(
-                            av[self.id_to_index[self.joint_name_to_id[name]]]))
-                    msg.name.append(name)
+                    servo_id = self.joint_name_to_id[name]
+                    if servo_id in self.id_to_index:
+                        msg.position.append(
+                            np.deg2rad(
+                                av[self.id_to_index[servo_id]]))
+                        msg.name.append(name)
             self.current_joint_states_pub.publish(msg)
             rate.sleep()
 
