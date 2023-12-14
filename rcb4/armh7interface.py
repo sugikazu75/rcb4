@@ -602,7 +602,7 @@ class ARMH7Interface(object):
         return self.memory_cstruct(WormmoduleStruct, worm_idx)
 
     def copy_worm_params_from_flash(self):
-        for i in range(max_sensor_num):
+        for i in self.search_worm_ids():
             self.dataflash_to_dataram(WormmoduleStruct, i)
 
     def buzzer(self):
