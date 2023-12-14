@@ -209,6 +209,10 @@ class ARMH7Interface(object):
             if len(read_data) > 0 and read_data[0] == len(read_data):
                 return read_data[1:len(read_data) - 1]
 
+    def get_version(self):
+        byte_list = [0x03, 0xfd, 0x00]
+        return self.serial_write(byte_list)
+
     def get_ack(self):
         byte_list = [0x04, 0xFE, 0x06, 0x08]
         return self.serial_write(byte_list)
