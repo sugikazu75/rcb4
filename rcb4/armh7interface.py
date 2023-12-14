@@ -1,8 +1,11 @@
+from pathlib import Path
 import platform
 import select
 import struct
 import time
 
+from colorama import Fore
+from colorama import Style
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 import numpy as np
@@ -63,16 +66,6 @@ armh7_variable_list = [
 ]
 
 
-armh7_elf_alist = {name: "" for name in armh7_variable_list}
-with open(kondoh7_elf(), 'rb') as stream:
-    elf = ELFFile(stream)
-    for section in elf.iter_sections():
-        if isinstance(section, SymbolTableSection):
-            for symbol in section.iter_symbols():
-                if symbol.name in armh7_elf_alist:
-                    address = symbol.entry['st_value']
-                    armh7_elf_alist[symbol.name] = address
-
 servo_eeprom_params64 = {
     'fix_header': (1, 2),
     'stretch_gain': (3, 4),
@@ -122,6 +115,7 @@ class ARMH7Interface(object):
         self.id_vector = None
         self.servo_sorted_ids = None
         self.worm_sorted_ids = None
+        self._armh7_address = None
         self._servo_id_to_worm_id = None
         self._worm_id_to_servo_id = None
         self._joint_to_actuator_matrix = None
@@ -157,6 +151,7 @@ class ARMH7Interface(object):
         except serial.SerialException as e:
             print(f"Error opening serial port: {e}")
             raise serial.SerialException(e)
+        self.check_firmware_version()
         self.copy_worm_params_from_flash()
         return self.check_ack()
 
@@ -177,6 +172,7 @@ class ARMH7Interface(object):
     def close(self):
         if self.serial:
             self.serial.close()
+        self.serial = None
 
     def serial_write(self, byte_list):
         if self.serial is None:
@@ -210,16 +206,36 @@ class ARMH7Interface(object):
                 return read_data[1:len(read_data) - 1]
 
     def get_version(self):
-        byte_list = [0x03, 0xfd, 0x00]
-        return self.serial_write(byte_list)
+        byte_list = [0x03, CommandTypes.Version, 0x00]
+        return self.serial_write(byte_list).decode('utf-8')
 
     def get_ack(self):
-        byte_list = [0x04, 0xFE, 0x06, 0x08]
+        byte_list = [0x04, CommandTypes.AckCheck, 0x06, 0x08]
         return self.serial_write(byte_list)
 
     def check_ack(self):
         ack_byte_list = self.get_ack()
         return ack_byte_list[1] == 0x06
+
+    def check_firmware_version(self):
+        version = self.get_version()
+        try:
+            kondoh7_elf(version)
+            return True
+        except RuntimeError as e:
+            print(Fore.RED + str(e)
+                  + '. Current firmware version is {}'.format(version))
+            print('Please run following commands.')
+            print('<' * 100)
+            print('sudo apt install -y binutils-arm-none-eabi')
+            from rcb4.data import stlink
+            st_flash_path = stlink()
+            bin_path = Path(kondoh7_elf()).with_suffix(".bin")
+            print(f'arm-none-eabi-objcopy -O binary {kondoh7_elf()} {bin_path}')  # NOQA
+            print(f"{st_flash_path} write {bin_path} 0x08000000")
+            print('>' * 100 + Style.RESET_ALL)
+            self.close()
+        raise RuntimeError('The firmware version is inconsistent.')
 
     def memory_read_aux(self, addr, length):
         """Memory Read Aux function"""
@@ -255,7 +271,7 @@ class ARMH7Interface(object):
 
     def memory_cstruct(self, cls, v_idx=0, addr=None, size=None):
         if addr is None:
-            addr = armh7_elf_alist[cls.__name__]
+            addr = self.armh7_address[cls.__name__]
         if size is None:
             size = cls.size
         buf = self.memory_read((size * v_idx) + addr, size)
@@ -279,7 +295,7 @@ class ARMH7Interface(object):
         return self.serial_write(byte_list)
 
     def cfunc_call(self, func_string, *args):
-        addr = armh7_elf_alist[func_string]
+        addr = self.armh7_address[func_string]
         argc = len(*args)
         n = 8 + 4 * argc
         byte_list = bytearray(n)
@@ -293,7 +309,7 @@ class ARMH7Interface(object):
         return self.serial_write(byte_list)
 
     def write_cls_alist(self, cls, idx, slot_name, vec):
-        baseaddr = armh7_elf_alist[cls.__name__]
+        baseaddr = self.armh7_address[cls.__name__]
         cls_size = cls.size
         typ = cls.__fields_types__[slot_name].c_type
         slot_size = c_type_to_size(typ)
@@ -328,7 +344,7 @@ class ARMH7Interface(object):
 
     def read_cstruct_slot_vector(self, cls, slot_name):
         vcnt = c_vector[cls.__name__] or 1
-        addr = armh7_elf_alist[cls.__name__]
+        addr = self.armh7_address[cls.__name__]
         cls_size = cls.size
         slot_offset = cls.__fields_types__[slot_name].offset
         c_type = cls.__fields_types__[slot_name].c_type
@@ -473,7 +489,7 @@ class ARMH7Interface(object):
         return (n, g)
 
     def set_cstruct_slot(self, cls, idx, slot_name, v):
-        baseaddr = armh7_elf_alist[cls.__name__]
+        baseaddr = self.armh7_address[cls.__name__]
         cls_size = cls.size
         typ = cls.__fields_types__[slot_name].c_type
         slot_size = c_type_to_size(typ)
@@ -622,8 +638,8 @@ class ARMH7Interface(object):
         self.set_data_size()
 
     def dataflash_to_dataram(self, cls, idx=0):
-        addr = armh7_elf_alist[cls.__name__] + idx * cls.size
-        saddr = armh7_elf_alist['_sdata']
+        addr = self.armh7_address[cls.__name__] + idx * cls.size
+        saddr = self.armh7_address['_sdata']
         offset = addr - saddr
         faddr = self.cstruct_slot(DataAddress, 'dataflash_address')
         self.cstruct_slot(DataAddress, 'src_addr', float(faddr[0]) + offset)
@@ -635,24 +651,24 @@ class ARMH7Interface(object):
         self.set_data_address()
         self.cstruct_slot(
             DataAddress, 'data_size',
-            armh7_elf_alist['_ebss'] - armh7_elf_alist['_sdata'])
+            self.armh7_address['_ebss'] - self.armh7_address['_sdata'])
         return self.cfunc_call('dataram_to_dataflash', [])
 
     def set_sidata(self, sidata=None):
-        sidata = sidata or armh7_elf_alist['_sidata']
+        sidata = sidata or self.armh7_address['_sidata']
         return self.cstruct_slot(DataAddress, '_sidata', sidata)
 
     def set_sdata(self, sdata=None):
-        sdata = sdata or armh7_elf_alist['_sdata']
+        sdata = sdata or self.armh7_address['_sdata']
         return self.cstruct_slot(DataAddress, '_sdata', sdata)
 
     def set_edata(self, edata=None):
-        edata = edata or armh7_elf_alist['_edata']
+        edata = edata or self.armh7_address['_edata']
         return self.cstruct_slot(DataAddress, '_edata', edata)
 
     def set_data_size(self, sdata=None, edata=None):
-        sdata = sdata or armh7_elf_alist['_sdata']
-        edata = edata or armh7_elf_alist['uwTickPrio']
+        sdata = sdata or self.armh7_address['_sdata']
+        edata = edata or self.armh7_address['uwTickPrio']
         return self.cstruct_slot(DataAddress, 'data_size', edata - sdata)
 
     def cstruct_slot(self, cls, slot_name, v=None):
@@ -662,7 +678,7 @@ class ARMH7Interface(object):
 
     def write_cstruct_slot_v(self, cls, slot_name, vec):
         vcnt = c_vector[cls.__name__] or 1
-        addr = armh7_elf_alist[cls.__name__]
+        addr = self.armh7_address[cls.__name__]
         skip_size = cls.size
         cnt = 1
         typ = cls.__fields_types__[slot_name].c_type
@@ -774,6 +790,24 @@ class ARMH7Interface(object):
             self._actuator_to_joint_matrix = np.linalg.inv(
                 self.joint_to_actuator_matrix)
         return self._actuator_to_joint_matrix
+
+    @property
+    def armh7_address(self):
+        if self._armh7_address is not None:
+            return self._armh7_address
+        self._armh7_address = {
+            name: ""
+            for name in armh7_variable_list}
+        version = self.get_version()
+        with open(kondoh7_elf(version), 'rb') as stream:
+            elf = ELFFile(stream)
+            for section in elf.iter_sections():
+                if isinstance(section, SymbolTableSection):
+                    for symbol in section.iter_symbols():
+                        if symbol.name in self._armh7_address:
+                            address = symbol.entry['st_value']
+                            self._armh7_address[symbol.name] = address
+        return self._armh7_address
 
     def servo_states(self):
         servo_on_indices = np.where(
