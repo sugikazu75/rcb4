@@ -1,3 +1,4 @@
+colorama
 cstruct
 gdown
 pyelftools
