@@ -206,11 +206,11 @@ class ARMH7Interface(object):
                 return read_data[1:len(read_data) - 1]
 
     def get_version(self):
-        byte_list = [0x03, 0xfd, 0x00]
+        byte_list = [0x03, CommandTypes.Version, 0x00]
         return self.serial_write(byte_list).decode('utf-8')
 
     def get_ack(self):
-        byte_list = [0x04, 0xFE, 0x06, 0x08]
+        byte_list = [0x04, CommandTypes.AckCheck, 0x06, 0x08]
         return self.serial_write(byte_list)
 
     def check_ack(self):
