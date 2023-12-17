@@ -34,6 +34,7 @@ include_directories(
 )
 
 add_executable(kxr_controller src/kxr_ros_controller.cpp src/kxr_robot_hardware.cpp)
+add_dependencies(kxr_controller ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 target_link_libraries(kxr_controller
   ${catkin_LIBRARIES}
   ${Eigen_LIBRARIES}
