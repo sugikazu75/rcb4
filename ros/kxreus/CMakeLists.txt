@@ -32,7 +32,7 @@ set(_yaml_path ${PROJECT_SOURCE_DIR}/config/kxrl2l2a6h2m.yaml)
 
 add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/kxrl2l2a6h2m.l
   COMMAND echo "${_urdf2eus} ${kxr_urdf} ${PROJECT_SOURCE_DIR}/kxrl2l2a6h2m.l"
-  COMMAND . ${_venv_setup} && ${_urdf2eus} ${kxr_urdf} ${PROJECT_SOURCE_DIR}/models/kxrl2l2a6h2m.l # --yaml-path ${_yaml_path}
+  COMMAND . ${_venv_setup} && ${_urdf2eus} ${kxr_urdf} ${PROJECT_SOURCE_DIR}/models/kxrl2l2a6h2m.l --yaml-path ${_yaml_path}
   DEPENDS ${kxr_urdf} ${_urdf2eus} ${_venv_setup} ${_yaml_path})
 
 add_custom_target(compile_kxr ALL DEPENDS ${PROJECT_SOURCE_DIR}/kxrl2l2a6h2m.l ${PROJECT_NAME}_generate_virtualenv)
