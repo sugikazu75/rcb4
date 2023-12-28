@@ -22,7 +22,7 @@ namespace kxr_controller {
     virtual bool init(ros::NodeHandle& root_nh, ros::NodeHandle& robot_hw_nh);
 
     ros::Duration getPeriod() const {
-            return ros::Duration(0.001);
+      return control_loop_period_;
     }
     ros::Time getTime() const { return ros::Time::now(); }
 
@@ -35,6 +35,7 @@ namespace kxr_controller {
     hardware_interface::JointStateInterface joint_state_interface;
     hardware_interface::PositionJointInterface joint_position_interface;
 
+    ros::Duration control_loop_period_;
     bool joint_state_received_;
     std::map<std::string, unsigned int> jointname_to_id_;
     ros::Subscriber joint_state_sub_;
