@@ -375,9 +375,14 @@ class ARMH7Interface(object):
             self.id_vector = list(sorted(ret))
         return self.id_vector
 
-    def reference_angle_vector(self):
-        return self.read_cstruct_slot_vector(
-            ServoStruct, slot_name='ref_angle')
+    def reference_angle_vector(self, servo_ids=None):
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        if len(servo_ids) == 0:
+            return np.empty(shape=0)
+        ref_angles = self.read_cstruct_slot_vector(
+            ServoStruct, slot_name='ref_angle')[servo_ids]
+        return ref_angles
 
     def servo_id_to_index(self, servo_ids=None):
         if servo_ids is None:
@@ -409,6 +414,7 @@ class ARMH7Interface(object):
             servo = self.memory_cstruct(ServoStruct, idx)
             if servo.flag > 0:
                 indices.append(idx)
+        indices = np.array(indices)
         self.servo_sorted_ids = indices
         return indices
 
