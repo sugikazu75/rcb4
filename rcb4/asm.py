@@ -23,7 +23,7 @@ def rcb4_checksum(byte_list: List[int]) -> int:
 
 
 def rcb4_velocity(v):
-    return min(255, int(round(v)))
+    return max(1, min(255, int(round(v))))
 
 
 def encode_servo_ids_to_nbytes_bin(
@@ -98,6 +98,9 @@ def encode_servo_ids_to_5bytes_bin(ids: List[int]) -> List[int]:
 def encode_servo_positions_to_bytes(fvector: List[float]) -> List[int]:
     """Creates a buffer with servo positions from a float vector.
 
+    Each element in fvector should be in the range 0 to 0xFFFF (65535).
+    This range corresponds to the typical range for a 16-bit integer.
+
     Parameters
     ----------
     fvector : List[float]
@@ -108,6 +111,9 @@ def encode_servo_positions_to_bytes(fvector: List[float]) -> List[int]:
     bytes: List[int]
         A bytes object representing the low and high bytes of servo positions.
     """
+    # Ensure all values are within the 0 to 0xFFFF range
+    fvector = np.clip(fvector, 0, 0xFFFF)
+
     int_positions = np.round(fvector).astype(np.int16)
     return list(int_positions.tobytes())
 
