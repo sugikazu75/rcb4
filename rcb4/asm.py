@@ -1,5 +1,6 @@
 from typing import List
-from typing import Union
+
+import numpy as np
 
 
 def rcb4_checksum(byte_list: List[int]) -> int:
@@ -94,31 +95,21 @@ def encode_servo_ids_to_5bytes_bin(ids: List[int]) -> List[int]:
     return encode_servo_ids_to_nbytes_bin(ids, 5)
 
 
-def rcb4_servo_positions(
-        ids: Union[int, List[int]], fvector: List[float]) -> List[int]:
-    """Creates a buffer with servo positions from given ids and float vector.
+def encode_servo_positions_to_bytes(fvector: List[float]) -> List[int]:
+    """Creates a buffer with servo positions from a float vector.
 
     Parameters
     ----------
-    ids : list or similar
-        A list of ids corresponding to servo positions.
-    fvector : list
+    fvector : List[float]
         A list of floating-point values representing servo positions.
 
     Returns
     -------
-    list
-        A list of bytes representing the low and high bytes of servo positions.
+    bytes: List[int]
+        A bytes object representing the low and high bytes of servo positions.
     """
-    if not isinstance(ids, list):
-        ids = list(ids)
-
-    fv = [int(round(v)) for v in fvector]
-    buf = []
-    for d in fv:
-        buf.append(d & 0xff)
-        buf.append((d >> 8) & 0xff)
-    return buf
+    int_positions = np.round(fvector).astype(np.int16)
+    return list(int_positions.tobytes())
 
 
 def four_bit_to_num(lst: List[int], values: List[int]):

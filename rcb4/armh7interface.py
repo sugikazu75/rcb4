@@ -13,9 +13,9 @@ import serial
 import serial.tools.list_ports
 
 from rcb4.asm import encode_servo_ids_to_5bytes_bin
+from rcb4.asm import encode_servo_positions_to_bytes
 from rcb4.asm import four_bit_to_num
 from rcb4.asm import rcb4_checksum
-from rcb4.asm import rcb4_servo_positions
 from rcb4.asm import rcb4_servo_svector
 from rcb4.asm import rcb4_velocity
 from rcb4.ctype_utils import c_type_to_numpy_format
@@ -440,7 +440,7 @@ class ARMH7Interface(object):
         byte_list = [CommandTypes.MultiServoSingleVelocity.value] \
             + encode_servo_ids_to_5bytes_bin(servo_ids) \
             + [rcb4_velocity(velocity)] \
-            + rcb4_servo_positions(servo_ids, servo_vector)
+            + encode_servo_positions_to_bytes(servo_vector)
         byte_list.insert(0, 2 + len(byte_list))
         byte_list.append(rcb4_checksum(byte_list))
         return self.serial_write(byte_list)
