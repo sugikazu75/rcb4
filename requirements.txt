@@ -1,5 +1,6 @@
 colorama
 cstruct
 gdown
+numpy
 pyelftools
 pyserial
