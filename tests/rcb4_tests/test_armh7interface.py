@@ -21,10 +21,12 @@ class TestRobotModel(unittest.TestCase):
         self.interface.hold()
         self.interface.neutral()
         reference = [8000, 8000]
+
         self.interface.servo_angle_vector(
             [32, 34],
             reference,
-            velocity=0)
+            velocity=1)
+        time.sleep(1.0)
         testing.assert_array_almost_equal(
             self.interface.reference_angle_vector(),
             reference)
