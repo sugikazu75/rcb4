@@ -13,9 +13,9 @@ import serial
 import serial.tools.list_ports
 
 from rcb4.asm import encode_servo_ids_to_5bytes_bin
+from rcb4.asm import encode_servo_positions_to_bytes
 from rcb4.asm import four_bit_to_num
 from rcb4.asm import rcb4_checksum
-from rcb4.asm import rcb4_servo_positions
 from rcb4.asm import rcb4_servo_svector
 from rcb4.asm import rcb4_velocity
 from rcb4.ctype_utils import c_type_to_numpy_format
@@ -375,9 +375,14 @@ class ARMH7Interface(object):
             self.id_vector = list(sorted(ret))
         return self.id_vector
 
-    def reference_angle_vector(self):
-        return self.read_cstruct_slot_vector(
-            ServoStruct, slot_name='ref_angle')
+    def reference_angle_vector(self, servo_ids=None):
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        if len(servo_ids) == 0:
+            return np.empty(shape=0)
+        ref_angles = self.read_cstruct_slot_vector(
+            ServoStruct, slot_name='ref_angle')[servo_ids]
+        return ref_angles
 
     def servo_id_to_index(self, servo_ids=None):
         if servo_ids is None:
@@ -409,6 +414,7 @@ class ARMH7Interface(object):
             servo = self.memory_cstruct(ServoStruct, idx)
             if servo.flag > 0:
                 indices.append(idx)
+        indices = np.array(indices)
         self.servo_sorted_ids = indices
         return indices
 
@@ -440,7 +446,7 @@ class ARMH7Interface(object):
         byte_list = [CommandTypes.MultiServoSingleVelocity.value] \
             + encode_servo_ids_to_5bytes_bin(servo_ids) \
             + [rcb4_velocity(velocity)] \
-            + rcb4_servo_positions(servo_ids, servo_vector)
+            + encode_servo_positions_to_bytes(servo_vector)
         byte_list.insert(0, 2 + len(byte_list))
         byte_list.append(rcb4_checksum(byte_list))
         return self.serial_write(byte_list)
