@@ -2,6 +2,7 @@ from pathlib import Path
 import platform
 import select
 import struct
+from threading import Lock
 import time
 
 from colorama import Fore
@@ -111,6 +112,7 @@ def padding_bytearray(ba, n):
 class ARMH7Interface(object):
 
     def __init__(self):
+        self.lock = Lock()
         self.serial = None
         self.id_vector = None
         self.servo_sorted_ids = None
@@ -179,11 +181,13 @@ class ARMH7Interface(object):
             raise RuntimeError('Serial is not opened.')
 
         data_to_send = bytes(byte_list)
-        try:
-            self.serial.write(data_to_send)
-        except serial.SerialException as e:
-            print(f"Error sending data: {e}")
-        return self.serial_read()
+        with self.lock:
+            try:
+                self.serial.write(data_to_send)
+            except serial.SerialException as e:
+                print(f"Error sending data: {e}")
+            ret = self.serial_read()
+        return ret
 
     def serial_read(self, timeout=10):
         if self.serial is None:
