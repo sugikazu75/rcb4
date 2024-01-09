@@ -4,6 +4,7 @@ import os
 import os.path as osp
 import shlex
 import subprocess
+import sys
 from threading import Lock
 
 import actionlib
@@ -114,7 +115,10 @@ class RCB4ROSBridge(object):
 
         self.arm = ARMH7Interface()
         arm = self.arm
-        arm.auto_open()
+        ret = arm.auto_open()
+        if ret is not True:
+            rospy.logerr('Could not open port!')
+            sys.exit(1)
         arm.search_servo_ids()
         arm.search_worm_ids()
         arm.search_wheel_sids()
@@ -315,6 +319,9 @@ class RCB4ROSBridge(object):
         rate = rospy.Rate(100)
 
         while not rospy.is_shutdown():
+            if self.arm.is_opened() is False:
+                rospy.logwarn('Disconnected.')
+                break
             with self.lock:
                 av = self.arm.angle_vector()
             msg = JointState()
