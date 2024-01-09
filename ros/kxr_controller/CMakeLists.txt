@@ -19,7 +19,15 @@ if(GCC_VERSION VERSION_LESS 9.4.0 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR C
   message(STATUS "GCC version is less than 9.4.0 and target architecture is ARM. Setting CXX_FLAGS_RELEASE to -O2.")
 endif()
 
+get_filename_component(RCB4_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
+message(STATUS "RCB4 Directory: ${RCB4_DIR}")
+
+# Command to copy the modified requirements.in to requirements.in.with_rcb4
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/requirements.in ${CMAKE_CURRENT_SOURCE_DIR}/requirements.in.with_rcb4 COPYONLY)
+file(APPEND ${CMAKE_CURRENT_SOURCE_DIR}/requirements.in.with_rcb4 "${RCB4_DIR}\n")
+
 find_package(catkin REQUIRED COMPONENTS
+  catkin_virtualenv
   actionlib
   actionlib_msgs
   std_msgs
@@ -32,6 +40,8 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(Eigen REQUIRED)
 
+catkin_python_setup()
+
 add_action_files(
   DIRECTORY action
   FILES ServoOnOff.action
@@ -43,6 +53,14 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS roscpp controller_manager hardware_interface angles urdf
+)
+
+catkin_generate_virtualenv(
+  INPUT_REQUIREMENTS requirements.in.with_rcb4
+  PYTHON_INTERPRETER python3
+  USE_SYSTEM_PACKAGES TRUE
+  ISOLATE_REQUIREMENTS FALSE
+  CHECK_VENV FALSE
 )
 
 include_directories(
@@ -58,6 +76,30 @@ target_link_libraries(kxr_controller
   ${Eigen_LIBRARIES}
 )
 
+file(GLOB PYTHON_SCRIPT_FILES node_scripts/* test/*)
+catkin_install_python(
+  PROGRAMS ${PYTHON_SCRIPT_FILES}
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+install(FILES requirements.txt
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
 install(TARGETS kxr_controller
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  find_package(roslaunch REQUIRED)
+  if(roslaunch_VERSION VERSION_LESS "1.11.1")
+    message(WARNING "roslaunch_add_file check fails with unsupported doc attributes ${roslaunch_VERSION}")
+  else()
+    file(GLOB LAUNCH_FILES launch/*.launch)
+    foreach(LAUNCH_FILE ${LAUNCH_FILES})
+      roslaunch_add_file_check(${LAUNCH_FILE})
+    endforeach()
+  endif()
+  add_rostest(test/kxr_controller.test ARGS namespace:="")
+  add_rostest(test/kxr_controller.test ARGS namespace:="robot_a")
+endif()
