@@ -546,7 +546,9 @@ class ARMH7Interface(object):
         for idx in range(max_sensor_num):
             worm = self.memory_cstruct(WormmoduleStruct, idx)
             if worm.module_type == 1:
-                indices.append(idx)
+                servo = self.memory_cstruct(ServoStruct, worm.servo_id)
+                if servo.rotation == 1:
+                    indices.append(idx)
         self.worm_sorted_ids = indices
         return indices
 
