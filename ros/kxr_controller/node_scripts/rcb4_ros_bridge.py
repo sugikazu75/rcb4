@@ -332,6 +332,9 @@ class RCB4ROSBridge(object):
         q_wxyz = self.arm.read_quaternion()
         (msg.orientation.w, msg.orientation.x,
          msg.orientation.y, msg.orientation.z) = q_wxyz
+        _, gyro = self.arm.gyro_norm_vector()
+        (msg.angular_velocity.x, msg.angular_velocity.y,
+         msg.angular_velocity.z) = gyro
         return msg
 
     def run(self):
