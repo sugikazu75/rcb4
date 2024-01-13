@@ -166,6 +166,22 @@ class RCB4ROSBridge(object):
         print(self.joint_servo_on)
         print(self.id_to_index)
 
+        initial_positions = {}
+        init_av = arm.angle_vector()
+        arm.servo_id_to_index()
+        for jn in self.joint_names:
+            if jn not in self.joint_name_to_id:
+                continue
+            servo_id = self.joint_name_to_id[jn]
+            if servo_id in arm.wheel_servo_sorted_ids:
+                continue
+            initial_positions[jn] = float(
+                np.deg2rad(init_av[self.id_to_index[servo_id]]))
+        rospy.loginfo('run kxr_controller')
+        set_initial_position(initial_positions, namespace=clean_namespace)
+        self.proc_kxr_controller = run_kxr_controller(
+            namespace=clean_namespace)
+
         self.worm_servo_ids = [
             arm.memory_cstruct(WormmoduleStruct, idx).servo_id
             for idx in arm.worm_sorted_ids]

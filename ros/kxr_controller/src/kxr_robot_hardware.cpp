@@ -56,6 +56,8 @@ namespace kxr_controller {
       }
       const std::string jointname = joint_pair.first;
       jointname_to_id_[jointname] = i;
+      robot_hw_nh.getParam(clean_namespace + "/initial_position/" + jointname, joint_position_command_[i]);
+      robot_hw_nh.getParam(clean_namespace + "/initial_position/" + jointname, joint_state_position_[i]);
 
       hardware_interface::JointStateHandle state_handle(jointname, &joint_state_position_[i], &joint_state_velocity_[i], &joint_state_effort_[i]);
       joint_state_interface.registerHandle(state_handle);
