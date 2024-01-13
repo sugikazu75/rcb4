@@ -15,7 +15,6 @@ class TestRobotModel(unittest.TestCase):
     def setUpClass(cls):
         cls.interface = ARMH7Interface()
         cls.interface.auto_open()
-        cls.interface.search_servo_ids()
 
     def test_servo_angle_vector(self):
         self.interface.hold()
