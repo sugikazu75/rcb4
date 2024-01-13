@@ -62,6 +62,20 @@ def run_robot_state_publisher(namespace=None):
     return process
 
 
+def run_kxr_controller(namespace=None):
+    command = f'/opt/ros/{os.environ["ROS_DISTRO"]}/bin/rosrun'
+    command += " kxr_controller kxr_controller"
+    command += ' __name=:kxr_controller'
+    command = shlex.split(command)
+    process = subprocess.Popen(command)
+    return process
+
+
+def set_initial_position(positions, namespace=None):
+    rospy.set_param(namespace + '/initial_position',
+                    positions)
+
+
 def set_fullbody_controller(joint_names):
     controller_yaml_dict = {
         'type': 'position_controllers/JointTrajectoryController',

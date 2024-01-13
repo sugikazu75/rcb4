@@ -20,15 +20,6 @@
       </rosparam>
     </node>
 
-    <node name="kxr_controller"
-          pkg="kxr_controller"
-          type="kxr_controller"
-          clear_params="true"
-          respawn="true" output="screen">
-      <rosparam>
-      </rosparam>
-    </node>
-
   </group>
 
   <group unless="$(eval len(arg('namespace')) > 0)">
@@ -45,14 +36,6 @@
       </rosparam>
     </node>
 
-    <node name="kxr_controller"
-          pkg="kxr_controller"
-          type="kxr_controller"
-          clear_params="true"
-          respawn="true" output="screen">
-      <rosparam>
-      </rosparam>
-    </node>
   </group>
 
 </launch>
