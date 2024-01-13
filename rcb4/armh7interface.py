@@ -153,9 +153,14 @@ class ARMH7Interface(object):
         except serial.SerialException as e:
             print(f"Error opening serial port: {e}")
             raise serial.SerialException(e)
+        ack = self.check_ack()
+        if ack is not True:
+            return False
         self.check_firmware_version()
         self.copy_worm_params_from_flash()
-        return self.check_ack()
+        self.search_worm_ids()
+        self.search_servo_ids()
+        return True
 
     def auto_open(self):
         system_info = platform.uname()
@@ -420,14 +425,22 @@ class ARMH7Interface(object):
     def search_servo_ids(self):
         if self.servo_sorted_ids is not None:
             return self.servo_sorted_ids
-        indices = []
+        servo_indices = []
+        wheel_indices = []
         for idx in range(rcb4_dof):
             servo = self.memory_cstruct(ServoStruct, idx)
             if servo.flag > 0:
-                indices.append(idx)
-        indices = np.array(indices)
-        self.servo_sorted_ids = indices
-        return indices
+                servo_indices.append(idx)
+                if idx not in self._servo_id_to_worm_id:
+                    # wheel
+                    if servo.rotation > 0:
+                        wheel_indices.append(idx)
+                    if servo.feedback > 0:
+                        self.set_cstruct_slot(ServoStruct, idx, 'feedback', 0)
+        servo_indices = np.array(servo_indices)
+        self.wheel_servo_sorted_ids = sorted(wheel_indices)
+        self.servo_sorted_ids = servo_indices
+        return servo_indices
 
     def hold(self, servo_ids=None):
         if servo_ids is None:
@@ -528,27 +541,23 @@ class ARMH7Interface(object):
         bytes[0:len(byte_data)] = byte_data
         return self.memory_write(addr, slot_size, bytes)
 
-    def search_wheel_sids(self):
-        indices = []
-        for idx in self.servo_sorted_ids:
-            servo = self.memory_cstruct(ServoStruct, idx)
-            if servo.rotation > 0:
-                indices.append(idx)
-            if servo.feedback > 0:
-                self.set_cstruct_slot(ServoStruct, idx, 'feedback', 0)
-        self.wheel_servo_sorted_ids = sorted(indices)
-        return indices
-
     def search_worm_ids(self):
         if self.worm_sorted_ids is not None:
             return self.worm_sorted_ids
         indices = []
+        self._servo_id_to_worm_id = {}
+        self._worm_id_to_servo_id = {}
         for idx in range(max_sensor_num):
             worm = self.memory_cstruct(WormmoduleStruct, idx)
             if worm.module_type == 1:
                 servo = self.memory_cstruct(ServoStruct, worm.servo_id)
                 if servo.rotation == 1:
                     indices.append(idx)
+                    if servo.feedback > 0:
+                        self.set_cstruct_slot(
+                            ServoStruct, worm.servo_id, 'feedback', 0)
+                self._servo_id_to_worm_id[worm.servo_id] = idx
+                self._worm_id_to_servo_id[idx] = worm.servo_id
         self.worm_sorted_ids = indices
         return indices
 
@@ -641,8 +650,11 @@ class ARMH7Interface(object):
         return self.memory_cstruct(WormmoduleStruct, worm_idx)
 
     def copy_worm_params_from_flash(self):
-        for i in self.search_worm_ids():
+        for i in range(max_sensor_num):
             self.dataflash_to_dataram(WormmoduleStruct, i)
+        self.write_cstruct_slot_v(
+            WormmoduleStruct, 'move_state',
+            np.zeros(max_sensor_num))
 
     def buzzer(self):
         return self.cfunc_call('buzzer_init_sound', [])
@@ -731,9 +743,15 @@ class ARMH7Interface(object):
                     v = vec
                 if not isinstance(v, (int, float)):
                     v = v[0] if len(v) > 1 else v
-                if typ in ('uint8', 'uint16', 'uint32'):
-                    v = round(v)
-                    struct.pack_into('I', byte_list, 10 + i * esize, v)
+                if typ == 'uint8':
+                    v = int(round(v))
+                    struct.pack_into('<B', byte_list, 10 + i * esize, v)
+                elif typ == 'uint16':
+                    v = int(round(v))
+                    struct.pack_into('<H', byte_list, 10 + i * esize, v)
+                elif typ == 'uint32':
+                    v = int(round(v))
+                    struct.pack_into('<I', byte_list, 10 + i * esize, v)
                 elif typ in ('float', 'double'):
                     struct.pack_into('<f', byte_list, 10 + i * esize, v)
                 else:
@@ -768,26 +786,10 @@ class ARMH7Interface(object):
 
     @property
     def servo_id_to_worm_id(self):
-        if self._servo_id_to_worm_id is not None:
-            return self._servo_id_to_worm_id
-        self._servo_id_to_worm_id = {}
-        self._worm_id_to_servo_id = {}
-        for idx in self.search_worm_ids():
-            worm = self.read_worm_calib_data(idx)
-            self._servo_id_to_worm_id[worm.servo_id] = idx
-            self._worm_id_to_servo_id[idx] = worm.servo_id
         return self._servo_id_to_worm_id
 
     @property
     def worm_id_to_servo_id(self):
-        if self._worm_id_to_servo_id is not None:
-            return self._worm_id_to_servo_id
-        self._servo_id_to_worm_id = {}
-        self._worm_id_to_servo_id = {}
-        for idx in self.search_worm_ids():
-            worm = self.read_worm_calib_data(idx)
-            self._servo_id_to_worm_id[worm.servo_id] = idx
-            self._worm_id_to_servo_id[idx] = worm.servo_id
         return self._worm_id_to_servo_id
 
     @property
@@ -832,7 +834,7 @@ class ARMH7Interface(object):
         servo_on_indices = np.where(
             self.reference_angle_vector() != 32768)[0]
         if len(servo_on_indices) > 0:
-            return servo_on_indices
+            return self.servo_sorted_ids[servo_on_indices]
         return []
 
 
