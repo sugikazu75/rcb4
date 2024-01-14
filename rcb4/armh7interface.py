@@ -122,6 +122,7 @@ class ARMH7Interface(object):
         self._worm_id_to_servo_id = None
         self._joint_to_actuator_matrix = None
         self._actuator_to_joint_matrix = None
+        self._worm_ref_angle = None
 
     def __del__(self):
         self.close()
@@ -414,7 +415,33 @@ class ARMH7Interface(object):
         return self.read_cstruct_slot_vector(
             ServoStruct, slot_name='current_angle')
 
-    def angle_vector(self):
+    def _send_angle_vector(self, av, servo_ids=None, velocity=127):
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        if len(av) != len(servo_ids):
+            raise ValueError(
+                'Length of servo_ids and angle_vector must be the same.')
+        worm_av = []
+        worm_indices = []
+        for i, (angle, servo_id) in enumerate(zip(av, servo_ids)):
+            if servo_id in self._servo_id_to_worm_id:
+                worm_av.append(angle)
+                worm_indices.append(self._servo_id_to_worm_id[servo_id])
+                av[i] = 135
+        if len(worm_indices) > 0:
+            if self._worm_ref_angle is None:
+                self._worm_ref_angle = np.array(self.read_cstruct_slot_vector(
+                    WormmoduleStruct, 'ref_angle'), dtype=np.float32)
+            self._worm_ref_angle[np.array(worm_indices)] = np.array(worm_av)
+            self.write_cstruct_slot_v(
+                WormmoduleStruct, 'ref_angle', self._worm_ref_angle)
+        svs = self.angle_vector_to_servo_angle_vector(av, servo_ids)
+        return self.servo_angle_vector(
+            servo_ids, svs, velocity=velocity)
+
+    def angle_vector(self, av=None, servo_ids=None, velocity=127):
+        if av is not None:
+            return self._send_angle_vector(av, servo_ids, velocity)
         servo_ids = self.search_servo_ids()
         av = np.append(self._angle_vector()[servo_ids], 1)
         av = np.matmul(av.T, self.actuator_to_joint_matrix.T)[:-1]
@@ -461,6 +488,10 @@ class ARMH7Interface(object):
         self._servo_id_to_sequentialized_servo_id[servo_indices] = np.arange(
             len(servo_indices))
         return servo_indices
+
+    def valid_servo_ids(self, servo_ids):
+        return np.isfinite(self._servo_id_to_sequentialized_servo_id[
+            np.array(servo_ids)])
 
     def hold(self, servo_ids=None):
         if servo_ids is None:

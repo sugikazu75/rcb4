@@ -40,6 +40,21 @@ class TestRobotModel(unittest.TestCase):
         testing.assert_array_almost_equal(
             sv, [8400, 9300])
 
+    def test_angle_vector(self):
+        self.interface.hold()
+        self.interface.neutral()
+        reference = [60, 30]
+        self.interface.angle_vector(
+            reference,
+            velocity=127)
+        time.sleep(4.0)
+        testing.assert_array_almost_equal(
+            self.interface.angle_vector(), reference,
+            decimal=0)
+        self.interface.neutral()
+        time.sleep(4.0)
+        self.interface.free()
+
     def test_servo_angle_vector(self):
         self.interface.hold()
         self.interface.neutral()
