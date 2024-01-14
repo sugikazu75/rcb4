@@ -15,14 +15,11 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
         joint_param = namespace + '/kxr_fullbody_controller/joints'
         rate = rospy.Rate(1)
         while not rospy.is_shutdown():
-            rospy.logwarn('Waiting {} set'.format(joint_param))
             self.joint_names = rospy.get_param(joint_param, None)
             if self.joint_names is not None:
                 break
+            rospy.logwarn('Waiting {} set'.format(joint_param))
             rate.sleep()
-        rospy.logerr('=' * 100)
-        rospy.logerr('{}'.format(self.joint_names))
-        rospy.logerr('=' * 100)
         super(KXRROSRobotInterface, self).__init__(*args, **kwargs)
         self.servo_on_off_client = actionlib.SimpleActionClient(
             namespace + '/kxr_fullbody_controller/servo_on_off',
@@ -59,7 +56,6 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
     @property
     def fullbody_controller(self):
         cont_name = 'kxr_fullbody_controller'
-        rospy.logerr('{}'.format(self.joint_names))
         return dict(
             controller_type=cont_name,
             controller_action=cont_name + '/follow_joint_trajectory',

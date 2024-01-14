@@ -34,8 +34,8 @@ namespace kxr_controller {
       return false;
     }
 
-    double control_loop_rate;
-    if (!root_nh.getParam("control_loop_rate", control_loop_rate) ||
+    double control_loop_rate ;
+    if (!robot_hw_nh.getParam(clean_namespace + "/control_loop_rate", control_loop_rate) ||
         control_loop_rate <= 0.0) {
       control_loop_rate = 20.0;
     }

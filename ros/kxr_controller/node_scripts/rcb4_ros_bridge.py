@@ -186,6 +186,8 @@ class RCB4ROSBridge(object):
             servo_id = self.joint_name_to_id[jn]
             if servo_id in arm.wheel_servo_sorted_ids:
                 continue
+            if servo_id not in self.id_to_index:
+                continue
             initial_positions[jn] = float(
                 np.deg2rad(init_av[self.id_to_index[servo_id]]))
         rospy.loginfo('run kxr_controller')
@@ -240,101 +242,56 @@ class RCB4ROSBridge(object):
         self.command_joint_state_sub.unregister()
         self.velocity_command_joint_state_sub.unregister()
 
-    def velocity_command_joint_state_callback(self, msg):
+    def _msg_to_angle_vector_and_servo_ids(
+            self, msg,
+            velocity_control=False):
+        used_servo_id = {}
         servo_ids = []
-        av_length = len(self.arm.servo_sorted_ids)
-        svs = np.zeros(av_length)
-        valid_indices = []
+        angle_vector = []
         for name, angle in zip(msg.name, msg.position):
-            if name not in self.joint_name_to_id:
-                continue
-            if name in self.joint_servo_on \
-               and self.joint_servo_on[name] is False:
+            if name not in self.joint_name_to_id or \
+               (name in self.joint_servo_on and not self.joint_servo_on[name]):
                 continue
             idx = self.joint_name_to_id[name]
-
+            if velocity_control:
+                if idx not in self.arm.wheel_servo_sorted_ids:
+                    continue
+            else:
+                if idx in self.arm.wheel_servo_sorted_ids:
+                    continue
             # should ignore duplicated index.
-            if idx not in self.id_to_index:
+            if idx in used_servo_id:
                 continue
-            # skip wheel joint
-            if idx not in self.arm.wheel_servo_sorted_ids:
-                continue
-            if self.id_to_index[idx] in valid_indices:
-                continue
-
-            angle = np.rad2deg(angle)
-            svs[self.id_to_index[idx]] = angle
-            valid_indices.append(self.id_to_index[idx])
+            used_servo_id[idx] = True
+            angle_vector.append(np.rad2deg(angle))
             servo_ids.append(idx)
-        tmp_av = np.ones(av_length + 1)
-        if len(valid_indices) == 0:
+        angle_vector = np.array(angle_vector)
+        servo_ids = np.array(servo_ids, dtype=np.int32)
+        valid_indices = self.arm.valid_servo_ids(servo_ids)
+        return angle_vector[valid_indices], servo_ids[valid_indices]
+
+    def velocity_command_joint_state_callback(self, msg):
+        av, servo_ids = self._msg_to_angle_vector_and_servo_ids(
+            msg, velocity_control=True)
+        if len(av) == 0:
             return
-        try:
-            tmp_av[:len(svs)] = np.array(svs)
-        except Exception:
-            return
-        svs = np.matmul(self.arm.joint_to_actuator_matrix, tmp_av)[
-            np.array(valid_indices)]
         if self._prev_velocity_command is not None and np.allclose(
-                self._prev_velocity_command, svs):
+                self._prev_velocity_command, av):
             return
-        self._prev_velocity_command = svs
+        self._prev_velocity_command = av
         try:
-            self.arm.servo_angle_vector(servo_ids, svs, velocity=0)
+            self.arm.angle_vector(av, servo_ids, velocity=0)
         except RuntimeError as e:
             self.unsubscribe()
             rospy.signal_shutdown('Disconnected {}.'.format(e))
 
     def command_joint_state_callback(self, msg):
-        servo_ids = []
-        av_length = len(self.arm.servo_sorted_ids)
-        svs = np.zeros(av_length)
-        valid_indices = []
-        worm_av = []
-        worm_indices = []
-        for name, angle in zip(msg.name, msg.position):
-            if name not in self.joint_name_to_id:
-                continue
-            if name in self.joint_servo_on \
-               and self.joint_servo_on[name] is False:
-                continue
-            idx = self.joint_name_to_id[name]
-
-            # should ignore duplicated index.
-            if idx not in self.id_to_index:
-                continue
-            # skip wheel joint
-            if idx in self.arm.wheel_servo_sorted_ids:
-                continue
-            if self.id_to_index[idx] in valid_indices:
-                continue
-
-            angle = np.rad2deg(angle)
-            if idx in self.worm_servo_ids:
-                worm_idx = self.servo_id_to_worm_id[idx]
-                worm_av.append(angle)
-                worm_indices.append(worm_idx)
-                angle = 135
-            svs[self.id_to_index[idx]] = angle
-            valid_indices.append(self.id_to_index[idx])
-            servo_ids.append(idx)
-        tmp_av = np.ones(av_length + 1)
-        if len(valid_indices) == 0:
+        av, servo_ids = self._msg_to_angle_vector_and_servo_ids(
+            msg, velocity_control=False)
+        if len(av) == 0:
             return
         try:
-            tmp_av[:len(svs)] = np.array(svs)
-        except Exception:
-            return
-        svs = np.matmul(self.arm.joint_to_actuator_matrix, tmp_av)[
-            np.array(valid_indices)]
-        try:
-            if len(worm_indices) > 0:
-                worm_av_tmp = np.array(self.arm.read_cstruct_slot_vector(
-                    WormmoduleStruct, 'ref_angle'), dtype=np.float32)
-                worm_av_tmp[np.array(worm_indices)] = np.array(worm_av)
-                self.arm.write_cstruct_slot_v(
-                    WormmoduleStruct, 'ref_angle', worm_av_tmp)
-            self.arm.servo_angle_vector(servo_ids, svs, velocity=0)
+            self.arm.angle_vector(av, servo_ids, velocity=1)
         except RuntimeError as e:
             self.unsubscribe()
             rospy.signal_shutdown('Disconnected {}.'.format(e))
@@ -354,7 +311,7 @@ class RCB4ROSBridge(object):
                 servo_vector.append(32768)
                 self.joint_servo_on[joint_name] = False
         try:
-            self.arm.servo_angle_vector(servo_ids, servo_vector, velocity=10)
+            self.arm.servo_angle_vector(servo_ids, servo_vector, velocity=1)
         except RuntimeError as e:
             self.unsubscribe()
             rospy.signal_shutdown('Disconnected {}.'.format(e))
