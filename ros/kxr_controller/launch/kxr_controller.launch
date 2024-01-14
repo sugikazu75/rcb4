@@ -5,8 +5,10 @@
   <arg name="namespace" default="" />
   <arg name="publish_imu" default="true" />
   <arg name="imu_frame_id" default="/bodyset94472077639384" />
+  <arg name="control_loop_rate" default="20" />
 
   <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
+    <param name="control_loop_rate" value="$(arg control_loop_rate)" />
     <node name="rcb4_ros_bridge"
           pkg="kxr_controller" type="rcb4_ros_bridge.py"
           clear_params="true"
@@ -23,6 +25,7 @@
   </group>
 
   <group unless="$(eval len(arg('namespace')) > 0)">
+    <param name="control_loop_rate" value="$(arg control_loop_rate)" />
     <node name="rcb4_ros_bridge"
           pkg="kxr_controller" type="rcb4_ros_bridge.py"
           clear_params="true"
