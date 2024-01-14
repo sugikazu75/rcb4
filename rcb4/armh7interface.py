@@ -406,6 +406,10 @@ class ARMH7Interface(object):
         return {id: i
                 for i, id in enumerate(servo_ids)}
 
+    def sequentialized_servo_ids(self, servo_ids):
+        return self._servo_id_to_sequentialized_servo_id[
+            np.array(servo_ids)].astype(np.uint8)
+
     def _angle_vector(self):
         return self.read_cstruct_slot_vector(
             ServoStruct, slot_name='current_angle')
@@ -421,6 +425,17 @@ class ARMH7Interface(object):
             av[id_to_index[
                 self.worm_id_to_servo_id[worm_idx]]] = worm_av[worm_idx]
         return av
+
+    def angle_vector_to_servo_angle_vector(self, av, servo_ids=None):
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        if len(av) != len(servo_ids):
+            raise ValueError(
+                'Length of servo_ids and angle_vector must be the same.')
+        seq_indices = self.sequentialized_servo_ids(servo_ids)
+        tmp_av = np.append(np.zeros(len(self.servo_sorted_ids)), 1)
+        tmp_av[seq_indices] = np.array(av)
+        return np.matmul(self.joint_to_actuator_matrix, tmp_av)[seq_indices]
 
     def search_servo_ids(self):
         if self.servo_sorted_ids is not None:
@@ -440,6 +455,11 @@ class ARMH7Interface(object):
         servo_indices = np.array(servo_indices)
         self.wheel_servo_sorted_ids = sorted(wheel_indices)
         self.servo_sorted_ids = servo_indices
+
+        self._servo_id_to_sequentialized_servo_id = np.nan * np.ones(rcb4_dof)
+        servo_indices = np.array(servo_indices)
+        self._servo_id_to_sequentialized_servo_id[servo_indices] = np.arange(
+            len(servo_indices))
         return servo_indices
 
     def hold(self, servo_ids=None):
