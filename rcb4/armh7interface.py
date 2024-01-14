@@ -32,6 +32,7 @@ from rcb4.struct_header import max_sensor_num
 from rcb4.struct_header import sensor_sidx
 from rcb4.struct_header import SensorbaseStruct
 from rcb4.struct_header import ServoStruct
+from rcb4.struct_header import SystemStruct
 from rcb4.struct_header import WormmoduleStruct
 
 
@@ -464,6 +465,24 @@ class ARMH7Interface(object):
         tmp_av[seq_indices] = np.array(av)
         return np.matmul(self.joint_to_actuator_matrix, tmp_av)[seq_indices]
 
+    def ics_start(self):
+        return self.set_cstruct_slot(SystemStruct, 0, 'ics_comm_stop',
+                                     [0, 0, 0, 0, 0, 0])
+
+    def ics_stop(self):
+        return self.set_cstruct_slot(SystemStruct, 0, 'ics_comm_stop',
+                                     [1, 1, 1, 1, 1, 1])
+
+    def idmode_scan(self):
+        self.ics_stop()
+        self.cfunc_call('servo_idmode_scan', [])
+        self.ics_start()
+
+        self.servo_sorted_ids = None
+        self.worm_sorted_ids = None
+        self.search_worm_ids()
+        self.search_servo_ids()
+
     def search_servo_ids(self):
         if self.servo_sorted_ids is not None:
             return self.servo_sorted_ids
@@ -485,8 +504,9 @@ class ARMH7Interface(object):
 
         self._servo_id_to_sequentialized_servo_id = np.nan * np.ones(rcb4_dof)
         servo_indices = np.array(servo_indices)
-        self._servo_id_to_sequentialized_servo_id[servo_indices] = np.arange(
-            len(servo_indices))
+        if len(servo_indices):
+            self._servo_id_to_sequentialized_servo_id[servo_indices] = \
+                np.arange(len(servo_indices))
         return servo_indices
 
     def valid_servo_ids(self, servo_ids):
@@ -615,25 +635,32 @@ class ARMH7Interface(object):
         return (n, g)
 
     def set_cstruct_slot(self, cls, idx, slot_name, v):
+        if not isinstance(v, list) or isinstance(v, tuple) or \
+           isinstance(v, np.ndarray):
+            v = [v]
+        cnt = len(v)
+
         baseaddr = self.armh7_address[cls.__name__]
         cls_size = cls.size
         typ = cls.__fields_types__[slot_name].c_type
-        slot_size = c_type_to_size(typ)
+        slot_size = cnt * c_type_to_size(typ)
         slot_offset = cls.__fields_types__[slot_name].offset
         cls.__fields_types__[slot_name].c_type
         addr = baseaddr + (idx * cls_size) + slot_offset
         bytes = bytearray(slot_size)
 
-        if typ == 'float':
-            byte_data = struct.pack('f', v)
-            byte_data = struct.unpack('4B', byte_data)
-        elif typ == 'uint16':
-            byte_data = struct.pack('H', v)
-            byte_data = struct.unpack('BB', byte_data)
-        elif typ == 'uint8':
-            byte_data = [v]
-        else:
-            raise RuntimeError('not implemented typ {}'.format(typ))
+        byte_data = b''
+        for value in v:
+            if typ == 'float':
+                tmp_byte_data = struct.pack('f', value)
+                byte_data += struct.unpack('4B', tmp_byte_data)
+            elif typ == 'uint16':
+                tmp_byte_data = struct.pack('H', value)
+                byte_data += struct.unpack('BB', tmp_byte_data)
+            elif typ == 'uint8':
+                byte_data += value.to_bytes(1, 'little')
+            else:
+                raise RuntimeError('not implemented typ {}'.format(typ))
         bytes[0:len(byte_data)] = byte_data
         return self.memory_write(addr, slot_size, bytes)
 
