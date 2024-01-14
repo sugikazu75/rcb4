@@ -20,9 +20,6 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
             if self.joint_names is not None:
                 break
             rate.sleep()
-        rospy.logerr('=' * 100)
-        rospy.logerr('{}'.format(self.joint_names))
-        rospy.logerr('=' * 100)
         super(KXRROSRobotInterface, self).__init__(*args, **kwargs)
         self.servo_on_off_client = actionlib.SimpleActionClient(
             namespace + '/kxr_fullbody_controller/servo_on_off',
