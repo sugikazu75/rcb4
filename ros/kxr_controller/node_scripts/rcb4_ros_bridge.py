@@ -144,6 +144,8 @@ class RCB4ROSBridge(object):
                 continue
             servo_id = info['id']
             direction = info['direction']
+            if servo_id not in self.id_to_index:
+                continue
             idx = self.id_to_index[servo_id]
             arm._joint_to_actuator_matrix[idx, idx] = \
                 direction * arm._joint_to_actuator_matrix[idx, idx]
