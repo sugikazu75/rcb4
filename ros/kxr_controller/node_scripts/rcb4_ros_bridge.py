@@ -99,6 +99,10 @@ def set_robot_description(urdf_path,
 class RCB4ROSBridge(object):
 
     def __init__(self):
+        self.proc_controller_spawner = None
+        self.proc_robot_state_publisher = None
+        self.proc_kxr_controller = None
+
         r = RobotModel()
         urdf_path = rospy.get_param('~urdf_path')
         with open(urdf_path) as f:
@@ -144,6 +148,8 @@ class RCB4ROSBridge(object):
                 continue
             servo_id = info['id']
             direction = info['direction']
+            if servo_id not in self.id_to_index:
+                continue
             idx = self.id_to_index[servo_id]
             arm._joint_to_actuator_matrix[idx, idx] = \
                 direction * arm._joint_to_actuator_matrix[idx, idx]
@@ -234,9 +240,12 @@ class RCB4ROSBridge(object):
                 queue_size=1)
 
     def __del__(self):
-        self.proc_controller_spawner.kill()
-        self.proc_robot_state_publisher.kill()
-        self.proc_kxr_controller.kill()
+        if self.proc_controller_spawner:
+            self.proc_controller_spawner.kill()
+        if self.proc_robot_state_publisher:
+            self.proc_robot_state_publisher.kill()
+        if self.proc_kxr_controller:
+            self.proc_kxr_controller.kill()
 
     def unsubscribe(self):
         self.command_joint_state_sub.unregister()
