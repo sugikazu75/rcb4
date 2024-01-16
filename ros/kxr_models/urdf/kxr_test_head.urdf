@@ -71,7 +71,7 @@
     <child  link="HEAD_LINK1"/>
     <origin xyz="0 0 0.036" rpy="0 -0 0 "/>
     <axis   xyz="0 -1 0"/>
-    <limit lower="-2.0944" upper="2.0944" effort="0.656248" velocity="7.47998" />
+    <limit lower="-2.0944" upper="2.0944" effort="0.656248" velocity="0.5" />
     <dynamics damping="0.2" friction="0" />
   </joint>
 </robot>

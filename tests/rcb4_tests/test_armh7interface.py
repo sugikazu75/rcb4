@@ -58,33 +58,38 @@ class TestRobotModel(unittest.TestCase):
     def test_servo_angle_vector(self):
         self.interface.hold()
         self.interface.neutral()
-        reference = [8000, 8000]
+        reference = [8000,]
+        target_servo_ids = [32,]
 
         self.interface.servo_angle_vector(
-            [32, 34],
+            target_servo_ids,
             reference,
             velocity=1)
         time.sleep(1.0)
         testing.assert_array_almost_equal(
-            self.interface.reference_angle_vector(),
+            self.interface.reference_angle_vector(target_servo_ids),
             reference)
         time.sleep(4.0)
-        if np.any(np.abs(self.interface.angle_vector() - 16) > 2.0):
-            self.assertRaises()
+        if np.any(np.abs(self.interface.angle_vector(
+                servo_ids=target_servo_ids) - 16) > 2.0):
+            raise AssertionError(
+                "Servo angles are beyond the acceptable range.")
 
         # multi velocities
-        reference = [7500, 7500]
+        reference = [7500,]
         self.interface.servo_angle_vector(
-            [32, 34],
+            target_servo_ids,
             reference,
             velocity=[10, 1])
         time.sleep(1.0)
         testing.assert_array_almost_equal(
-            self.interface.reference_angle_vector(),
+            self.interface.reference_angle_vector(target_servo_ids),
             reference)
         time.sleep(4.0)
-        if np.any(np.abs(self.interface.angle_vector() - 0) > 2.0):
-            self.assertRaises()
+        if np.any(np.abs(self.interface.angle_vector(
+                servo_ids=target_servo_ids) - 0) > 2.0):
+            raise AssertionError(
+                "Servo angles are beyond the acceptable range.")
 
         self.interface.neutral()
         time.sleep(4.0)

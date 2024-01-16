@@ -424,6 +424,7 @@ class ARMH7Interface(object):
         if len(av) != len(servo_ids):
             raise ValueError(
                 'Length of servo_ids and angle_vector must be the same.')
+        av = np.array(av)
         worm_av = []
         worm_indices = []
         for i, (angle, servo_id) in enumerate(zip(av, servo_ids)):
@@ -445,15 +446,17 @@ class ARMH7Interface(object):
     def angle_vector(self, av=None, servo_ids=None, velocity=127):
         if av is not None:
             return self._send_angle_vector(av, servo_ids, velocity)
-        servo_ids = self.search_servo_ids()
-        av = np.append(self._angle_vector()[servo_ids], 1)
+        all_servo_ids = self.search_servo_ids()
+        av = np.append(self._angle_vector()[all_servo_ids], 1)
         av = np.matmul(av.T, self.actuator_to_joint_matrix.T)[:-1]
-        id_to_index = self.servo_id_to_index(servo_ids)
+        id_to_index = self.servo_id_to_index(all_servo_ids)
         worm_av = self.read_cstruct_slot_vector(
             WormmoduleStruct, slot_name='present_angle')
         for worm_idx in self.search_worm_ids():
             av[id_to_index[
                 self.worm_id_to_servo_id[worm_idx]]] = worm_av[worm_idx]
+        if servo_ids is not None:
+            av = av[self.sequentialized_servo_ids(servo_ids)]
         return av
 
     def angle_vector_to_servo_angle_vector(self, av, servo_ids=None):
@@ -975,7 +978,16 @@ class ARMH7Interface(object):
         servo_on_indices = np.where(
             self.reference_angle_vector() != 32768)[0]
         if len(servo_on_indices) > 0:
-            return self.servo_sorted_ids[servo_on_indices]
+            servo_on_ids = self.servo_sorted_ids[servo_on_indices]
+            # The worm module is always determined to be in the servo-off
+            # state because it is erroneously recognized
+            # as being in the servo-on state.
+            if self._servo_id_to_worm_id is not None \
+               and len(self._servo_id_to_worm_id) > 0:
+                mask = np.isin(servo_on_ids,
+                               list(self._servo_id_to_worm_id))
+                servo_on_ids = servo_on_ids[~mask]
+            return servo_on_ids
         return []
 
 
