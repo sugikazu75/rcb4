@@ -537,10 +537,9 @@ class ARMH7Interface(object):
     def neutral(self, servo_ids=None, velocity=1000):
         if servo_ids is None:
             servo_ids = self.servo_sorted_ids
-        servo_vector = [7500] * len(servo_ids)
-        return self.servo_angle_vector(servo_ids,
-                                       servo_vector,
-                                       velocity=velocity)
+        av = [0] * len(servo_ids)
+        return self.angle_vector(av, servo_ids,
+                                 velocity=velocity)
 
     def servo_angle_vector(self, servo_ids, servo_vector, velocity=127):
         """Sends a command to control multiple servos.

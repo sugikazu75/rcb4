@@ -43,6 +43,7 @@ class TestRobotModel(unittest.TestCase):
     def test_angle_vector(self):
         self.interface.hold()
         self.interface.neutral()
+        time.sleep(4.0)
         reference = [60, 30]
         self.interface.angle_vector(
             reference,
