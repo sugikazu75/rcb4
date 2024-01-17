@@ -16,7 +16,12 @@ class TestRobotModel(unittest.TestCase):
         cls.interface = ARMH7Interface()
         cls.interface.auto_open()
 
+    def test_reference_angle_vector(self):
+        self.interface.reference_angle_vector([])
+
     def test_sequentialized_servo_ids(self):
+        self.interface.sequentialized_servo_ids([])
+
         testing.assert_array_equal(
             self.interface.sequentialized_servo_ids([32, 34]),
             [0, 1])
@@ -56,11 +61,13 @@ class TestRobotModel(unittest.TestCase):
         time.sleep(4.0)
         self.interface.free()
 
+        self.interface.angle_vector([], [])
+
     def test_servo_angle_vector(self):
         self.interface.hold()
         self.interface.neutral()
-        reference = [8000,]
-        target_servo_ids = [32,]
+        reference = [8000, ]
+        target_servo_ids = [32, ]
 
         self.interface.servo_angle_vector(
             target_servo_ids,
@@ -77,7 +84,7 @@ class TestRobotModel(unittest.TestCase):
                 "Servo angles are beyond the acceptable range.")
 
         # multi velocities
-        reference = [7500,]
+        reference = [7500, ]
         self.interface.servo_angle_vector(
             target_servo_ids,
             reference,
