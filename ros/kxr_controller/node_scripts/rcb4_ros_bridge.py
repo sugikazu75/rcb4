@@ -349,6 +349,7 @@ class RCB4ROSBridge(object):
                 break
             try:
                 av = self.arm.angle_vector()
+                torque_vector = self.arm.servo_error()
             except RuntimeError as e:
                 self.unsubscribe()
                 rospy.signal_shutdown('Disconnected {}.'.format(e))
@@ -362,6 +363,8 @@ class RCB4ROSBridge(object):
                         msg.position.append(
                             np.deg2rad(
                                 av[self.id_to_index[servo_id]]))
+                        msg.effort.append(
+                            torque_vector[self.id_to_index[servo_id]])
                         msg.name.append(name)
             self.current_joint_states_pub.publish(msg)
 

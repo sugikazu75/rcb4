@@ -404,6 +404,15 @@ class ARMH7Interface(object):
             ServoStruct, slot_name='ref_angle')[servo_ids]
         return ref_angles
 
+    def servo_error(self, servo_ids=None):
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        if len(servo_ids) == 0:
+            return np.empty(shape=0)
+        error_angles = self.read_cstruct_slot_vector(
+            ServoStruct, slot_name='error_angle')[servo_ids]
+        return error_angles
+
     def servo_id_to_index(self, servo_ids=None):
         if servo_ids is None:
             servo_ids = self.search_servo_ids()
