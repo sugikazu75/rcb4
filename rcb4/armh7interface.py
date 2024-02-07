@@ -414,11 +414,9 @@ class ARMH7Interface(object):
             ServoStruct, slot_name='error_angle')[servo_ids]
         return error_angles
 
-    def servo_id_to_index(self, servo_ids=None):
-        if servo_ids is None:
-            servo_ids = self.search_servo_ids()
-        return {id: i
-                for i, id in enumerate(servo_ids)}
+    def servo_id_to_index(self, servo_id):
+        if self.valid_servo_ids([servo_id]):
+            return self.sequentialized_servo_ids([servo_id])[0]
 
     def sequentialized_servo_ids(self, servo_ids):
         if len(servo_ids) == 0:
@@ -463,12 +461,11 @@ class ARMH7Interface(object):
             return np.empty(shape=0)
         av = np.append(self._angle_vector()[all_servo_ids], 1)
         av = np.matmul(av.T, self.actuator_to_joint_matrix.T)[:-1]
-        id_to_index = self.servo_id_to_index(all_servo_ids)
         worm_av = self.read_cstruct_slot_vector(
             WormmoduleStruct, slot_name='present_angle')
         for worm_idx in self.search_worm_ids():
-            av[id_to_index[
-                self.worm_id_to_servo_id[worm_idx]]] = worm_av[worm_idx]
+            av[self.servo_id_to_index(
+                self.worm_id_to_servo_id[worm_idx])] = worm_av[worm_idx]
         if servo_ids is not None:
             if len(servo_ids) == 0:
                 return np.empty(shape=0)

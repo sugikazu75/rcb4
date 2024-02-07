@@ -135,7 +135,6 @@ class RCB4ROSBridge(object):
         if ret is not True:
             rospy.logerr('Could not open port!')
             sys.exit(1)
-        self.id_to_index = self.interface.servo_id_to_index()
         self._prev_velocity_command = None
 
         for _, info in servo_infos.items():
@@ -143,9 +142,9 @@ class RCB4ROSBridge(object):
                 continue
             servo_id = info['id']
             direction = info['direction']
-            if servo_id not in self.id_to_index:
+            idx = self.interface.servo_id_to_index(servo_id)
+            if idx is None:
                 continue
-            idx = self.id_to_index[servo_id]
             self.interface._joint_to_actuator_matrix[idx, idx] = \
                 direction * self.interface._joint_to_actuator_matrix[idx, idx]
 
@@ -234,17 +233,17 @@ class RCB4ROSBridge(object):
     def set_initial_positions(self, clean_namespace):
         initial_positions = {}
         init_av = self.interface.angle_vector()
-        self.interface.servo_id_to_index()
         for jn in self.joint_names:
             if jn not in self.joint_name_to_id:
                 continue
             servo_id = self.joint_name_to_id[jn]
             if servo_id in self.interface.wheel_servo_sorted_ids:
                 continue
-            if servo_id not in self.id_to_index:
+            idx = self.interface.servo_id_to_index(servo_id)
+            if idx is None:
                 continue
             initial_positions[jn] = float(
-                np.deg2rad(init_av[self.id_to_index[servo_id]]))
+                np.deg2rad(init_av[idx]))
         set_initial_position(initial_positions, namespace=clean_namespace)
 
     def _msg_to_angle_vector_and_servo_ids(
@@ -356,13 +355,12 @@ class RCB4ROSBridge(object):
             for name in self.joint_names:
                 if name in self.joint_name_to_id:
                     servo_id = self.joint_name_to_id[name]
-                    if servo_id in self.id_to_index:
-                        msg.position.append(
-                            np.deg2rad(
-                                av[self.id_to_index[servo_id]]))
-                        msg.effort.append(
-                            torque_vector[self.id_to_index[servo_id]])
-                        msg.name.append(name)
+                    idx = self.interface.servo_id_to_index(servo_id)
+                    if idx is None:
+                        continue
+                    msg.position.append(np.deg2rad(av[idx]))
+                    msg.effort.append(torque_vector[idx])
+                    msg.name.append(name)
             self.current_joint_states_pub.publish(msg)
 
             if self.publish_imu and self.imu_publisher.get_num_connections():
