@@ -164,6 +164,7 @@ class ARMH7Interface(object):
         self.copy_worm_params_from_flash()
         self.search_worm_ids()
         self.search_servo_ids()
+        self.all_jointbase_sensors()
         return True
 
     def auto_open(self):

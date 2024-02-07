@@ -130,19 +130,16 @@ class RCB4ROSBridge(object):
             JointState,
             queue_size=1)
 
-        self.arm = ARMH7Interface()
-        arm = self.arm
-        ret = arm.auto_open()
+        self.interface = ARMH7Interface()
+        ret = self.interface.auto_open()
         if ret is not True:
             rospy.logerr('Could not open port!')
             sys.exit(1)
-        arm.all_jointbase_sensors()
-        # arm.send_stretch(40)
-        self.id_to_index = self.arm.servo_id_to_index()
+        self.id_to_index = self.interface.servo_id_to_index()
         self._prev_velocity_command = None
 
-        print(arm.joint_to_actuator_matrix)
-        print(arm._actuator_to_joint_matrix)
+        print(self.interface.joint_to_actuator_matrix)
+        print(self.interface._actuator_to_joint_matrix)
         for _, info in servo_infos.items():
             if isinstance(info, int):
                 continue
@@ -151,16 +148,16 @@ class RCB4ROSBridge(object):
             if servo_id not in self.id_to_index:
                 continue
             idx = self.id_to_index[servo_id]
-            arm._joint_to_actuator_matrix[idx, idx] = \
-                direction * arm._joint_to_actuator_matrix[idx, idx]
-        print(arm.joint_to_actuator_matrix)
+            self.interface._joint_to_actuator_matrix[idx, idx] = \
+                direction * self.interface._joint_to_actuator_matrix[idx, idx]
+        print(self.interface.joint_to_actuator_matrix)
 
         self.fullbody_jointnames = []
         for jn in self.joint_names:
             if jn not in self.joint_name_to_id:
                 continue
             servo_id = self.joint_name_to_id[jn]
-            if servo_id in arm.wheel_servo_sorted_ids:
+            if servo_id in self.interface.wheel_servo_sorted_ids:
                 continue
             self.fullbody_jointnames.append(jn)
         set_fullbody_controller(self.fullbody_jointnames)
@@ -168,10 +165,10 @@ class RCB4ROSBridge(object):
         print('Fullbody jointnames')
         print(self.fullbody_jointnames)
 
-        self.servo_id_to_worm_id = self.arm.servo_id_to_worm_id
+        self.servo_id_to_worm_id = self.interface.servo_id_to_worm_id
 
         self.joint_servo_on = {jn: False for jn in self.joint_names}
-        servo_on_states = arm.servo_states()
+        servo_on_states = self.interface.servo_states()
         for jn in self.joint_names:
             if jn not in self.joint_name_to_id:
                 continue
@@ -184,13 +181,13 @@ class RCB4ROSBridge(object):
         print(self.id_to_index)
 
         initial_positions = {}
-        init_av = arm.angle_vector()
-        arm.servo_id_to_index()
+        init_av = self.interface.angle_vector()
+        self.interface.servo_id_to_index()
         for jn in self.joint_names:
             if jn not in self.joint_name_to_id:
                 continue
             servo_id = self.joint_name_to_id[jn]
-            if servo_id in arm.wheel_servo_sorted_ids:
+            if servo_id in self.interface.wheel_servo_sorted_ids:
                 continue
             if servo_id not in self.id_to_index:
                 continue
@@ -202,8 +199,8 @@ class RCB4ROSBridge(object):
             namespace=clean_namespace)
 
         self.worm_servo_ids = [
-            arm.memory_cstruct(WormmoduleStruct, idx).servo_id
-            for idx in arm.worm_sorted_ids]
+            self.interface.memory_cstruct(WormmoduleStruct, idx).servo_id
+            for idx in self.interface.worm_sorted_ids]
 
         self.command_joint_state_sub = rospy.Subscriber(
             clean_namespace + '/command_joint_state',
@@ -263,10 +260,10 @@ class RCB4ROSBridge(object):
                 continue
             idx = self.joint_name_to_id[name]
             if velocity_control:
-                if idx not in self.arm.wheel_servo_sorted_ids:
+                if idx not in self.interface.wheel_servo_sorted_ids:
                     continue
             else:
-                if idx in self.arm.wheel_servo_sorted_ids:
+                if idx in self.interface.wheel_servo_sorted_ids:
                     continue
             # should ignore duplicated index.
             if idx in used_servo_id:
@@ -276,7 +273,7 @@ class RCB4ROSBridge(object):
             servo_ids.append(idx)
         angle_vector = np.array(angle_vector)
         servo_ids = np.array(servo_ids, dtype=np.int32)
-        valid_indices = self.arm.valid_servo_ids(servo_ids)
+        valid_indices = self.interface.valid_servo_ids(servo_ids)
         return angle_vector[valid_indices], servo_ids[valid_indices]
 
     def velocity_command_joint_state_callback(self, msg):
@@ -289,7 +286,7 @@ class RCB4ROSBridge(object):
             return
         self._prev_velocity_command = av
         try:
-            self.arm.angle_vector(av, servo_ids, velocity=0)
+            self.interface.angle_vector(av, servo_ids, velocity=0)
         except RuntimeError as e:
             self.unsubscribe()
             rospy.signal_shutdown('Disconnected {}.'.format(e))
@@ -300,7 +297,7 @@ class RCB4ROSBridge(object):
         if len(av) == 0:
             return
         try:
-            self.arm.angle_vector(av, servo_ids, velocity=1)
+            self.interface.angle_vector(av, servo_ids, velocity=1)
         except RuntimeError as e:
             self.unsubscribe()
             rospy.signal_shutdown('Disconnected {}.'.format(e))
@@ -320,7 +317,8 @@ class RCB4ROSBridge(object):
                 servo_vector.append(32768)
                 self.joint_servo_on[joint_name] = False
         try:
-            self.arm.servo_angle_vector(servo_ids, servo_vector, velocity=1)
+            self.interface.servo_angle_vector(
+                servo_ids, servo_vector, velocity=1)
         except RuntimeError as e:
             self.unsubscribe()
             rospy.signal_shutdown('Disconnected {}.'.format(e))
@@ -330,7 +328,7 @@ class RCB4ROSBridge(object):
         msg = sensor_msgs.msg.Imu()
         msg.header.frame_id = self.imu_frame_id
         msg.header.stamp = rospy.Time.now()
-        q_wxyz, acc, gyro = self.arm.read_imu_data()
+        q_wxyz, acc, gyro = self.interface.read_imu_data()
         (msg.orientation.w, msg.orientation.x,
          msg.orientation.y, msg.orientation.z) = q_wxyz
         (msg.angular_velocity.x, msg.angular_velocity.y,
@@ -343,13 +341,13 @@ class RCB4ROSBridge(object):
         rate = rospy.Rate(100)
 
         while not rospy.is_shutdown():
-            if self.arm.is_opened() is False:
+            if self.interface.is_opened() is False:
                 self.unsubscribe()
                 rospy.signal_shutdown('Disconnected.')
                 break
             try:
-                av = self.arm.angle_vector()
-                torque_vector = self.arm.servo_error()
+                av = self.interface.angle_vector()
+                torque_vector = self.interface.servo_error()
             except RuntimeError as e:
                 self.unsubscribe()
                 rospy.signal_shutdown('Disconnected {}.'.format(e))
