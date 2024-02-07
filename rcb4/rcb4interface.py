@@ -11,7 +11,6 @@ from rcb4.asm import encode_servo_ids_to_5bytes_bin
 from rcb4.asm import encode_servo_positions_to_bytes
 from rcb4.asm import encode_servo_velocity_and_position_to_bytes
 from rcb4.asm import rcb4_checksum
-from rcb4.asm import rcb4_servo_svector
 from rcb4.asm import rcb4_velocity
 
 
@@ -420,23 +419,90 @@ class RCB4Interface(object):
         # send the command
         return self.serial_write(byte_list)
 
-    def read_stretch(self, servo_ids=None):
+    def set_servo_parameters_command(self, values, servo_ids=None,
+                                     servo_param_type='stretch'):
+        """Generate a command to modify the parameters of servo motors.
+
+        Parameters
+        ----------
+        values : list or array-like
+            The new parameter values to be set for the servo motors.
+        servo_ids : list or array-like, optional
+            The IDs of the servo motors whose parameters are to be changed.
+            If not provided, the method searches for servo IDs automatically.
+        servo_param_type : str, default 'stretch'
+            The type of parameter to be changed. Can be 'stretch' for stretch
+            adjustment or 'speed' for speed adjustment.
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - return_data_size (int): The size of the data expected to
+              be returned.
+            - byte_list (list): A list of bytes forming the command to send to
+              the servos.
+
+        Raises
+        ------
+        ValueError
+            If the lengths of `servo_ids` and `values` do not match, or if an
+            invalid `servo_param_type` is provided.
+
+        Notes
+        -----
+        This method generates commands for altering servo motor parameters.
+        It is designed to be used as a static method and can be accessed
+        externally. The servo parameters can be modified to adjust either
+        the stretch or speed of the servo motors based on the
+        `servo_param_type` provided.
+
+        Warnings
+        --------
+        The data in the provided `values` and potentially `servo_ids`
+        could be modified. Exercise caution when using mutable objects.
+        """
         if servo_ids is None:
-            servo_ids = self.servo_sorted_ids
-        return [self.servo_param64(sid, ['stretch_gain'])['stretch_gain'] // 2
-                for sid in servo_ids]
+            servo_ids = self.search_servo_ids()
+        if not servo_ids:
+            return -1, []
+        if len(values) != len(servo_ids):
+            raise ValueError('Length of `servo_ids` and `values` '
+                             'must be the same.')
+
+        # Sort the servo vectors based on servo IDs
+        # for consistent command structure
+        sorted_indices = np.argsort(servo_ids)
+        sorted_servo_ids = np.array(servo_ids)[sorted_indices]
+        sorted_values = np.array(values)[sorted_indices]
+
+        byte_list = [CommandTypes.ServoParam.value]
+        byte_list.extend(encode_servo_ids_to_5bytes_bin(sorted_servo_ids))
+
+        if servo_param_type == 'stretch':
+            byte_list.append(ServoParams.Stretch.value)
+        elif servo_param_type == 'speed':
+            byte_list.append(ServoParams.Speed.value)
+        else:
+            raise ValueError(f'Invalid `servo_param_type`: {servo_param_type}')
+
+        # Clip the values to be within the valid range and convert to
+        # unsigned 8-bit integers
+        byte_list.extend(np.clip(
+            sorted_values, 1, 127).astype(np.uint8).tolist())
+
+        # Insert the length of the command at the beginning and
+        # append the checksum at the end
+        byte_list.insert(0, 2 + len(byte_list))
+        byte_list.append(rcb4_checksum(byte_list))
+        return 4, byte_list
 
     def send_stretch(self, value=127, servo_ids=None):
         if servo_ids is None:
             servo_ids = self.servo_sorted_ids
         if not isinstance(value, list) or not isinstance(value, tuple):
             value = [value] * len(servo_ids)
-        byte_list = [CommandTypes.ServoParam.value] \
-            + encode_servo_ids_to_5bytes_bin(servo_ids) \
-            + [ServoParams.Stretch.value] \
-            + rcb4_servo_svector(servo_ids, value)
-        byte_list.insert(0, 2 + len(byte_list))
-        byte_list.append(rcb4_checksum(byte_list))
+        _, byte_list = self.set_servo_parameters_command(value, servo_ids)
         return self.serial_write(byte_list)
 
     @property
