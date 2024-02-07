@@ -25,6 +25,7 @@ from rcb4.ctype_utils import c_type_to_size
 from rcb4.data import kondoh7_elf
 from rcb4.rcb4interface import CommandTypes
 from rcb4.rcb4interface import rcb4_dof
+from rcb4.rcb4interface import RCB4Interface
 from rcb4.rcb4interface import ServoParams
 from rcb4.struct_header import c_vector
 from rcb4.struct_header import DataAddress
@@ -166,6 +167,32 @@ class ARMH7Interface(object):
         self.search_servo_ids()
         self.all_jointbase_sensors()
         return True
+
+    @staticmethod
+    def from_port(port=None):
+        ports = serial.tools.list_ports.comports()
+        if port is not None:
+            for cand in ports:
+                if cand.device == port:
+                    if port.vid == 0x165C and port.pid == 0x0008:
+                        interface = RCB4Interface()
+                        interface.open(port)
+                        return interface
+            interface = ARMH7Interface()
+            interface.open(port)
+            return interface
+
+        interface = ARMH7Interface()
+        ret = interface.auto_open()
+        print(ret)
+        if ret is True:
+            return interface
+
+        interface = RCB4Interface()
+        ret = interface.auto_open()
+        print(ret)
+        if ret is True:
+            return interface
 
     def auto_open(self):
         system_info = platform.uname()
@@ -527,6 +554,7 @@ class ARMH7Interface(object):
         if len(servo_indices):
             self._servo_id_to_sequentialized_servo_id[servo_indices] = \
                 np.arange(len(servo_indices))
+        self.joint_to_actuator_matrix
         return servo_indices
 
     def valid_servo_ids(self, servo_ids):
