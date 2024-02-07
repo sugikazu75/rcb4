@@ -18,7 +18,6 @@ from skrobot.utils.urdf import no_mesh_load_mode
 import yaml
 
 from rcb4.armh7interface import ARMH7Interface
-from rcb4.armh7interface import WormmoduleStruct
 
 
 np.set_printoptions(precision=0, suppress=True)
@@ -130,25 +129,28 @@ class RCB4ROSBridge(object):
             JointState,
             queue_size=1)
 
-        self.interface = ARMH7Interface()
-        ret = self.interface.auto_open()
-        if ret is not True:
+        self.interface = ARMH7Interface.from_port()
+        if self.interface is None:
             rospy.logerr('Could not open port!')
             sys.exit(1)
         self._prev_velocity_command = None
 
+        wheel_servo_sorted_ids = []
         for _, info in servo_infos.items():
             if isinstance(info, int):
                 continue
             servo_id = info['id']
             direction = info['direction']
+            if 'type' in info and info['type'] == 'continuous':
+                wheel_servo_sorted_ids.append(servo_id)
             idx = self.interface.servo_id_to_index(servo_id)
             if idx is None:
                 continue
             self.interface._joint_to_actuator_matrix[idx, idx] = \
                 direction * self.interface._joint_to_actuator_matrix[idx, idx]
+        if self.interface.wheel_servo_sorted_ids is None:
+            self.interface.wheel_servo_sorted_ids = wheel_servo_sorted_ids
 
-        self.servo_id_to_worm_id = self.interface.servo_id_to_worm_id
         self.set_fullbody_controller(clean_namespace)
         self.set_initial_positions(clean_namespace)
         self.check_servo_states()
@@ -156,10 +158,6 @@ class RCB4ROSBridge(object):
         rospy.loginfo('run kxr_controller')
         self.proc_kxr_controller = run_kxr_controller(
             namespace=clean_namespace)
-
-        self.worm_servo_ids = [
-            self.interface.memory_cstruct(WormmoduleStruct, idx).servo_id
-            for idx in self.interface.worm_sorted_ids]
 
         self.command_joint_state_sub = rospy.Subscriber(
             clean_namespace + '/command_joint_state',

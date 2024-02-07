@@ -13,7 +13,6 @@ from rcb4.asm import encode_servo_velocity_and_position_to_bytes
 from rcb4.asm import rcb4_checksum
 from rcb4.asm import rcb4_servo_svector
 from rcb4.asm import rcb4_velocity
-from rcb4.struct_header import ServoStruct
 
 
 class CommandTypes(Enum):
@@ -52,6 +51,7 @@ class RCB4Interface(object):
         self.lock = Lock()
         self.serial = None
         self.servo_sorted_ids = None
+        self.wheel_servo_sorted_ids = None
         self._joint_to_actuator_matrix = None
         self._actuator_to_joint_matrix = None
 
@@ -93,8 +93,7 @@ class RCB4Interface(object):
         if ack is not True:
             return False
         self.check_firmware_version()
-        # self.copy_worm_params_from_flash()
-        # self.search_servo_ids()
+        self.search_servo_ids()
         return True
 
     def auto_open(self):
@@ -219,7 +218,7 @@ class RCB4Interface(object):
             servo_ids = self.search_servo_ids()
         if len(servo_ids) == 0:
             return np.empty(shape=0)
-        ref_angles = interface._angle_vector('reference')[servo_ids]
+        ref_angles = self._angle_vector('reference')[servo_ids]
         return ref_angles
 
     def servo_error(self, servo_ids=None):
@@ -227,9 +226,12 @@ class RCB4Interface(object):
             servo_ids = self.search_servo_ids()
         if len(servo_ids) == 0:
             return np.empty(shape=0)
-        error_angles = self.read_cstruct_slot_vector(
-            ServoStruct, slot_name='error_angle')[servo_ids]
+        error_angles = self._angle_vector('error')[servo_ids]
         return error_angles
+
+    def servo_id_to_index(self, servo_id):
+        if self.valid_servo_ids([servo_id]):
+            return self.sequentialized_servo_ids([servo_id])[0]
 
     def sequentialized_servo_ids(self, servo_ids):
         if len(servo_ids) == 0:
@@ -326,6 +328,7 @@ class RCB4Interface(object):
         if len(servo_indices):
             self._servo_id_to_sequentialized_servo_id[servo_indices] = \
                 np.arange(len(servo_indices))
+        self.joint_to_actuator_matrix
         return servo_indices
 
     def valid_servo_ids(self, servo_ids):

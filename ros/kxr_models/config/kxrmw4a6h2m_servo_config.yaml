@@ -9,8 +9,8 @@ joint_name_to_servo_id: {
   LARM_JOINT5: 29,
   LARM_JOINT6: 19,
   LARM_JOINT7: 19,
-  LLEG_JOINT0: {'id': 25, 'direction': -1},
-  LLEG_JOINT1: {'id': 17, 'direction': -1},
+  LLEG_JOINT0: {'id': 1, 'direction': -1, 'type': 'continuous'},
+  LLEG_JOINT1: {'id': 11, 'direction': -1, 'type': 'continuous'},
   RARM_JOINT0: 2,
   RARM_JOINT1: 4,
   RARM_JOINT2: 22,
@@ -19,6 +19,6 @@ joint_name_to_servo_id: {
   RARM_JOINT5: 28,
   RARM_JOINT6: 18,
   RARM_JOINT7: 18,
-  RLEG_JOINT0: {'id': 24, 'direction': 1},
-  RLEG_JOINT1: {'id': 16, 'direction': 1}
+  RLEG_JOINT0: {'id': 0, 'direction': 1, 'type': 'continuous'},
+  RLEG_JOINT1: {'id': 10, 'direction': 1, 'type': 'continuous'}
 }
