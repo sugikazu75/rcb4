@@ -138,8 +138,6 @@ class RCB4ROSBridge(object):
         self.id_to_index = self.interface.servo_id_to_index()
         self._prev_velocity_command = None
 
-        print(self.interface.joint_to_actuator_matrix)
-        print(self.interface._actuator_to_joint_matrix)
         for _, info in servo_infos.items():
             if isinstance(info, int):
                 continue
@@ -150,51 +148,13 @@ class RCB4ROSBridge(object):
             idx = self.id_to_index[servo_id]
             self.interface._joint_to_actuator_matrix[idx, idx] = \
                 direction * self.interface._joint_to_actuator_matrix[idx, idx]
-        print(self.interface.joint_to_actuator_matrix)
-
-        self.fullbody_jointnames = []
-        for jn in self.joint_names:
-            if jn not in self.joint_name_to_id:
-                continue
-            servo_id = self.joint_name_to_id[jn]
-            if servo_id in self.interface.wheel_servo_sorted_ids:
-                continue
-            self.fullbody_jointnames.append(jn)
-        set_fullbody_controller(self.fullbody_jointnames)
-        # set_fullbody_controller(self.joint_names)
-        print('Fullbody jointnames')
-        print(self.fullbody_jointnames)
 
         self.servo_id_to_worm_id = self.interface.servo_id_to_worm_id
+        self.set_fullbody_controller(clean_namespace)
+        self.set_initial_positions(clean_namespace)
+        self.check_servo_states()
 
-        self.joint_servo_on = {jn: False for jn in self.joint_names}
-        servo_on_states = self.interface.servo_states()
-        for jn in self.joint_names:
-            if jn not in self.joint_name_to_id:
-                continue
-            idx = self.joint_name_to_id[jn]
-            if idx in servo_on_states:
-                self.joint_servo_on[jn] = True
-            else:
-                self.joint_servo_on[jn] = False
-        print(self.joint_servo_on)
-        print(self.id_to_index)
-
-        initial_positions = {}
-        init_av = self.interface.angle_vector()
-        self.interface.servo_id_to_index()
-        for jn in self.joint_names:
-            if jn not in self.joint_name_to_id:
-                continue
-            servo_id = self.joint_name_to_id[jn]
-            if servo_id in self.interface.wheel_servo_sorted_ids:
-                continue
-            if servo_id not in self.id_to_index:
-                continue
-            initial_positions[jn] = float(
-                np.deg2rad(init_av[self.id_to_index[servo_id]]))
         rospy.loginfo('run kxr_controller')
-        set_initial_position(initial_positions, namespace=clean_namespace)
         self.proc_kxr_controller = run_kxr_controller(
             namespace=clean_namespace)
 
@@ -247,6 +207,45 @@ class RCB4ROSBridge(object):
     def unsubscribe(self):
         self.command_joint_state_sub.unregister()
         self.velocity_command_joint_state_sub.unregister()
+
+    def check_servo_states(self):
+        self.joint_servo_on = {jn: False for jn in self.joint_names}
+        servo_on_states = self.interface.servo_states()
+        for jn in self.joint_names:
+            if jn not in self.joint_name_to_id:
+                continue
+            idx = self.joint_name_to_id[jn]
+            if idx in servo_on_states:
+                self.joint_servo_on[jn] = True
+            else:
+                self.joint_servo_on[jn] = False
+
+    def set_fullbody_controller(self, clean_namespace):
+        self.fullbody_jointnames = []
+        for jn in self.joint_names:
+            if jn not in self.joint_name_to_id:
+                continue
+            servo_id = self.joint_name_to_id[jn]
+            if servo_id in self.interface.wheel_servo_sorted_ids:
+                continue
+            self.fullbody_jointnames.append(jn)
+        set_fullbody_controller(self.fullbody_jointnames)
+
+    def set_initial_positions(self, clean_namespace):
+        initial_positions = {}
+        init_av = self.interface.angle_vector()
+        self.interface.servo_id_to_index()
+        for jn in self.joint_names:
+            if jn not in self.joint_name_to_id:
+                continue
+            servo_id = self.joint_name_to_id[jn]
+            if servo_id in self.interface.wheel_servo_sorted_ids:
+                continue
+            if servo_id not in self.id_to_index:
+                continue
+            initial_positions[jn] = float(
+                np.deg2rad(init_av[self.id_to_index[servo_id]]))
+        set_initial_position(initial_positions, namespace=clean_namespace)
 
     def _msg_to_angle_vector_and_servo_ids(
             self, msg,
