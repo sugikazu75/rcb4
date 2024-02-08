@@ -18,6 +18,7 @@ from skrobot.utils.urdf import no_mesh_load_mode
 import yaml
 
 from rcb4.armh7interface import ARMH7Interface
+from rcb4.rcb4interface import RCB4Interface
 
 
 np.set_printoptions(precision=0, suppress=True)
@@ -129,7 +130,11 @@ class RCB4ROSBridge(object):
             JointState,
             queue_size=1)
 
-        self.interface = ARMH7Interface.from_port()
+        if rospy.get_param('~use_rcb4'):
+            self.interface = RCB4Interface()
+            self.interface.auto_open()
+        else:
+            self.interface = ARMH7Interface.from_port()
         if self.interface is None:
             rospy.logerr('Could not open port!')
             sys.exit(1)
@@ -185,6 +190,8 @@ class RCB4ROSBridge(object):
             clean_namespace)
 
         self.publish_imu = rospy.get_param('~publish_imu', True)
+        if self.interface.__class__.__name__ == 'RCB4Interface':
+            self.publish_imu = False
         if self.publish_imu:
             self.imu_frame_id = rospy.get_param(
                 '~imu_frame_id', clean_namespace + '/' + r.root_link.name)

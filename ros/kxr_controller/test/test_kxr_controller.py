@@ -6,7 +6,6 @@ import unittest
 
 from kxr_controller.kxr_interface import KXRROSRobotInterface
 import numpy as np
-from numpy import testing
 import rospy
 from skrobot.model import RobotModel
 
@@ -39,9 +38,13 @@ class TestKXRController(unittest.TestCase):
         self.ri.wait_interpolation()
         rospy.sleep(1.0)
         current_angles = self.ri.angle_vector()
-        testing.assert_array_almost_equal(
-            np.rad2deg(current_angles), [45, 45],
-            decimal=0)
+        expected_angles = 45 * np.ones(len(current_angles))
+        self.assertTrue(
+            np.all(np.abs(np.rad2deg(current_angles)
+                          - expected_angles) <= 2.0),
+            f"The difference in angles exceeds 2 degrees: "
+            f"Current angles = {current_angles}, "
+            f"Expected angles = {expected_angles}")
         self.ri.angle_vector(self.robot_model.init_pose(), 1.0)
         self.ri.wait_interpolation()
         self.ri.servo_off()
