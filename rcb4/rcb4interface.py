@@ -102,7 +102,6 @@ class RCB4Interface(object):
     # The maximum total byte count of motion data
     MotionDataCount = 2048 * 120
 
-
     def __init__(self):
         self.lock = Lock()
         self.serial = None
@@ -283,7 +282,7 @@ class RCB4Interface(object):
         txbuf.append(CommandTypes.Move.value)
         txbuf.append(SubMoveCmd.ComToRam.value)
         txbuf.append(dest_addr & 0xff)
-        txbuf.append((dest_addr >> 8 ) & 0xff)
+        txbuf.append((dest_addr >> 8) & 0xff)
         txbuf.append(0x00)
         if len(dest_data) == 1:
             txbuf.append(dest_data[0])
@@ -630,9 +629,10 @@ class RCB4Interface(object):
     def call_command(self, rom_addr):
         """Creates a command to call a specified ROM address.
 
-        This method generates a command array to be sent to a device, instructing it
-        to perform a jump to the specified ROM address. This function is static and
-        can be accessed externally without an instance of the class.
+        This method generates a command array to be sent to a device,
+        instructing it to perform a jump to the specified ROM address.
+        This function is static and can be accessed externally without
+        an instance of the class.
 
         Parameters
         ----------
@@ -645,13 +645,14 @@ class RCB4Interface(object):
             return_data_size : int
                 The size of the data expected to be returned by the command.
             txbuf : list of int
-                The list representing the entire command to be sent, including the
-                command to call the ROM address, the address itself, and the checksum.
+                The list representing the entire command to be sent,
+                including the command to call the ROM address, the address
+                itself, and the checksum.
 
         Notes
         -----
-        The command created by this function does not check conditions before calling
-        the specified address.
+        The command created by this function does not check conditions before
+        calling the specified address.
 
         Warnings
         --------
@@ -796,14 +797,16 @@ class RCB4Interface(object):
         Notes
         -----
         Modifies the config data to resume the motion.
-        Direct manipulation of internal config data (`self._config_data`) is involved.
+        Direct manipulation of internal config data
+        (`self._config_data`) is involved.
         """
         self._config_data |= ConfigData.EnableRunEeprom.value
         self._config_data &= ~ConfigData.EnableServoResponse.value
         self._config_data |= ConfigData.EnableReferenceTable.value
         self._config_data |= ConfigData.EnableSio.value
         buf = [self._config_data & 0xff, (self._config_data >> 8) & 0xff]
-        return self.write_move_com_to_ram_command(RamAddr.ConfigRamAddress.value, buf)
+        return self.write_move_com_to_ram_command(
+            RamAddr.ConfigRamAddress.value, buf)
 
     def play_motion(self, motion_num):
         """Plays the specified motion.

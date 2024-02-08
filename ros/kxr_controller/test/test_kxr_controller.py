@@ -6,7 +6,6 @@ import unittest
 
 from kxr_controller.kxr_interface import KXRROSRobotInterface
 import numpy as np
-from numpy import testing
 import rospy
 from skrobot.model import RobotModel
 
