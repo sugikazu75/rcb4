@@ -88,7 +88,7 @@ target_link_libraries(kxr_controller
   ${Eigen_LIBRARIES}
 )
 
-file(GLOB PYTHON_SCRIPT_FILES node_scripts/* test/*)
+file(GLOB PYTHON_SCRIPT_FILES scripts/* node_scripts/* test/*)
 catkin_install_python(
   PROGRAMS ${PYTHON_SCRIPT_FILES}
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
