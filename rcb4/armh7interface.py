@@ -1040,5 +1040,5 @@ class ARMH7Interface(object):
 
 
 if __name__ == '__main__':
-    arm = ARMH7Interface()
-    print(arm.auto_open())
+    interface = ARMH7Interface()
+    print(interface.auto_open())
