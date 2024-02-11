@@ -164,6 +164,12 @@ class ARMH7Interface(object):
         self.check_firmware_version()
         self.copy_worm_params_from_flash()
         self.search_worm_ids()
+        # Set a baseline threshold value
+        # before sending joint angle commands with ref_angle in the WormModule.
+        self.write_cstruct_slot_v(
+            WormmoduleStruct, 'thleshold', 30 * np.ones(max_sensor_num))
+        self.write_cstruct_slot_v(
+            WormmoduleStruct, 'thleshold_scale', np.ones(max_sensor_num))
         self.search_servo_ids()
         self.all_jointbase_sensors()
         return True
@@ -1034,5 +1040,5 @@ class ARMH7Interface(object):
 
 
 if __name__ == '__main__':
-    arm = ARMH7Interface()
-    print(arm.auto_open())
+    interface = ARMH7Interface()
+    print(interface.auto_open())
