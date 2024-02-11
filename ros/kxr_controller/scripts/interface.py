@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+
+import argparse
+
+import IPython
+from kxr_controller.kxr_interface import KXRROSRobotInterface
+import rospy
+from skrobot.model import RobotModel
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Run KXRROSRobotInterface')
+    parser.add_argument('--viewer', type=str,
+                        help='Specify the viewer: trimesh', default=None)
+    parser.add_argument(
+        '--namespace', type=str, help='Specify the ROS namespace', default='')
+    args = parser.parse_args()
+
+    rospy.init_node('kxr_interface', anonymous=True)
+    robot_model = RobotModel()
+    robot_model.load_urdf_from_robot_description(
+        args.namespace + '/robot_description')
+    ri = KXRROSRobotInterface(  # NOQA
+        robot_model, namespace=args.namespace, controller_timeout=60.0)
+
+    if args.viewer is not None:
+        if args.viewer == 'trimesh':
+            from skrobot.viewers import TrimeshSceneViewer
+            viewer = TrimeshSceneViewer(resolution=(640, 480))
+            viewer.add(robot_model)
+            viewer.show()
+        else:
+            raise NotImplementedError(
+                'Not supported viewer {}'.format(args.viewer))
+
+    # Drop into an IPython shell
+    IPython.embed()
+
+
+if __name__ == '__main__':
+    main()
