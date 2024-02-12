@@ -2,10 +2,12 @@
 
   <arg name="urdf_path" default="$(find kxr_models)/urdf/kxrmw4a6h2m.urdf" />
   <arg name="servo_config_path" default="$(find kxr_models)/config/kxrmw4a6h2m_servo_config.yaml" />
+  <arg name="use_rcb4" default="false" doc="Flag to use RCB4 mini board"/>
 
   <include file="$(find kxr_controller)/launch/kxr_controller.launch" >
     <arg name="urdf_path" value="$(arg urdf_path)" />
     <arg name="servo_config_path" value="$(arg servo_config_path)" />
+    <arg name="use_rcb4" value="$(arg use_rcb4)" />
   </include>
 
   <include file="$(find kxr_controller)/launch/diff_drive_controller.launch" />
