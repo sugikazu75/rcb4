@@ -1,0 +1,32 @@
+<launch>
+
+  <arg name="namespace" default="" />
+  <arg name="port" default="8000" />
+
+  <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
+    <node name="eusmodel_server"
+          pkg="kxreus" type="eus_model_server.py" >
+    </node>
+
+    <node name="http_server_node"
+          pkg="kxreus" type="http_server_node.py" >
+      <rosparam subst_value="true" >
+        port: $(arg port)
+      </rosparam>
+    </node>
+  </group>
+
+  <group unless="$(eval len(arg('namespace')) > 0)">
+    <node name="eusmodel_server"
+          pkg="kxreus" type="eus_model_server.py" >
+    </node>
+
+    <node name="http_server_node"
+          pkg="kxreus" type="http_server_node.py" >
+      <rosparam subst_value="true" >
+        port: $(arg port)
+      </rosparam>
+    </node>
+  </group>
+
+</launch>
