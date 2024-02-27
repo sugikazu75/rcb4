@@ -4,24 +4,28 @@
 (ros::load-ros-manifest "kxr_controller")
 
 
-(defun load-robot-model (&key (port 8000)
-                           (namespace nil))
+(defun load-robot-model (&key (port 8000) (namespace nil))
   (let* ((port "8000")
-         (hash (if namespace (format nil "~A~A" namespace (ros::get-param "/eusmodel_hash"))
-                   (ros::get-param "/eusmodel_hash")))
-         (robot-name (if namespace (format nil "~A~A" namespace (ros::get-param "/eus_robot_name"))
-                         (ros::get-param "/eus_robot_name")))
-         (outpath (ros::resolve-ros-path (format nil "package://kxreus/models/cache/~A.l" hash)))
-         (server-url (format nil "http://~A:~A/~A.l"
-                             (ros::get-host)
-                             port
-                             hash)))
+         (hash-param-name (if namespace (format nil "~A~A" namespace "/eusmodel_hash") "/eusmodel_hash"))
+         (robot-name-param-name (if namespace (format nil "~A~A" namespace "/eus_robot_name") "/eus_robot_name"))
+         hash robot-name outpath server-url)
+    (while (null hash)
+      (ros::ros-info (format nil "Waiting rosparam ~A" hash-param-name))
+      (setq hash (ros::get-param hash-param-name nil))
+      (unix::usleep (* 1000 1000)))
+    (ros::ros-info (format nil "Get rosparam ~A" hash-param-name))
+
+    (while (null robot-name)
+      (ros::ros-info (format nil "Waiting rosparam ~A" robot-name-param-name))
+      (setq robot-name (ros::get-param robot-name-param-name nil))
+      (unix::usleep (* 1000 1000)))
+    (ros::ros-info (format nil "Get rosparam ~A" robot-name-param-name))
+
+    (setq outpath (ros::resolve-ros-path (format nil "package://kxreus/models/cache/~A.l" hash)))
+    (setq server-url (format nil "http://~A:~A/~A.l" (ros::get-host) port hash))
+
     (when (not (probe-file outpath))
-      (while (not (= (unix:system (format nil "wget -O ~A ~A"
-                                          outpath
-                                          server-url
-                                          ))
-                     0))
+      (while (not (= (unix:system (format nil "wget -O ~A ~A" outpath server-url)) 0))
         (ros::ros-info (format nil "Waiting model file from server url ~A" server-url))
         (unix::usleep (* 1000 1000))))
     (load outpath)
@@ -42,7 +46,7 @@
      (while (and (ros::ok) (null joint-names))
        (ros::ros-info (format nil "Waiting ~A rosparam set" joint-param))
        (setq joint-names (ros::get-param joint-param nil))
-       (ros::sleep)))
+       (unix::usleep (* 1000 1000))))
 
    (send-super* :init :robot robot :type type
                 :groupname "kxr_interface"
