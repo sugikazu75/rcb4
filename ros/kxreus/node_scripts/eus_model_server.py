@@ -56,12 +56,6 @@ class EusModelServer(object):
                     f.write(urdf)
                 md5sum = checksum_md5(tmp_file)
 
-                r = RobotModel()
-                with open(tmp_file, 'r') as f:
-                    with no_mesh_load_mode():
-                        r.load_urdf_file(f)
-                robot_name = r.urdf_robot_model.name
-
                 rospack = rospkg.RosPack()
                 kxreus_path = rospack.get_path('kxreus')
                 eus_path = os.path.join(
@@ -72,6 +66,12 @@ class EusModelServer(object):
                     rospy.set_param(self.clean_namespace + '/eusmodel_hash',
                                     md5sum)
                     continue
+
+                r = RobotModel()
+                with open(tmp_file, 'r') as f:
+                    with no_mesh_load_mode():
+                        r.load_urdf_file(f)
+                robot_name = r.urdf_robot_model.name
 
                 lock_path = eus_path + ".lock"
                 lock = FileLock(lock_path, timeout=10)
