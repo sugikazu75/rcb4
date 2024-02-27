@@ -50,7 +50,6 @@ class EusModelServer(object):
                 r.load_urdf_file(f)
         return r
 
-
     def run(self):
         rate = rospy.Rate(1)
 
