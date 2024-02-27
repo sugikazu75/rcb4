@@ -115,5 +115,5 @@
 
   (ros::spin-once)
   (send *ri* :spin-once)
-  (send *robot* :angle-vector (send *ri* :angle-vector))
+  (send *robot* :angle-vector (send *ri* :state :potentio-vector))
   (when create-viewer (objects (list *robot*))))
