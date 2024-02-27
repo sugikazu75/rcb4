@@ -71,7 +71,7 @@ if __name__ == '__main__':
     clean_namespace = full_namespace[:last_slash_pos] \
         if last_slash_pos != 0 else ''
 
-    port = rospy.get_param(clean_namespace + '/port', 8000)
+    port = rospy.get_param(clean_namespace + '/port', 8123)
     server = ThreadedHTTPServer(
         '0.0.0.0', port, CustomHTTPRequestHandler, www_directory)
     server.start()
