@@ -130,7 +130,10 @@ class RCB4ROSBridge(object):
             JointState,
             queue_size=1)
 
-        if rospy.get_param('~use_rcb4'):
+        if rospy.get_param('~device', None):
+            self.interface = ARMH7Interface.from_port(
+                rospy.get_param('~device', None))
+        elif rospy.get_param('~use_rcb4'):
             self.interface = RCB4Interface()
             self.interface.auto_open()
         else:
