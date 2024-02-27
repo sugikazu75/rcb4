@@ -341,7 +341,8 @@ class RCB4ROSBridge(object):
         return msg
 
     def run(self):
-        rate = rospy.Rate(100)
+        rate = rospy.Rate(rospy.get_param(
+            self.clean_namespace + '/control_loop_rate', 20))
 
         while not rospy.is_shutdown():
             if self.interface.is_opened() is False:
