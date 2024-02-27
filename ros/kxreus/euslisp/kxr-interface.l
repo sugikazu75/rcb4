@@ -108,7 +108,7 @@
                    (create-viewer t))
   (unless (boundp '*robot*)
     (setq *robot* (load-robot-model :namespace namespace
-                                    :port (ros::get-param (if namespace (format nil "~A/port" namespace) "/port") 8123))))
+                                    :port (ros::get-param (if namespace (format nil "~A/mesh_server_port" namespace) "/mesh_server_port") 8123))))
   (unless (ros::ok) (ros::roseus "kxr_eus_interface"))
   (unless (boundp '*ri*)
     (setq *ri* (instance kxr-interface :init *robot* :namespace namespace)))
