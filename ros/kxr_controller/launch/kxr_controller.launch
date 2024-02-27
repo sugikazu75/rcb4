@@ -7,6 +7,7 @@
   <arg name="imu_frame_id" default="/bodyset94472077639384" />
   <arg name="control_loop_rate" default="20" />
   <arg name="use_rcb4" default="false" doc="Flag to use RCB4 mini board"/>
+  <arg name="device" default="" doc="Device path"/>
 
   <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
     <param name="control_loop_rate" value="$(arg control_loop_rate)" />
@@ -15,6 +16,7 @@
           clear_params="true"
           output="screen"
           required="true" >
+      <param name="device" type="str" value="$(arg device)" />
       <rosparam subst_value="true" >
         urdf_path: $(arg urdf_path)
         servo_config_path: $(arg servo_config_path)
@@ -33,6 +35,7 @@
           clear_params="true"
           output="screen"
           required="true" >
+      <param name="device" type="str" value="$(arg device)" />
       <rosparam subst_value="true" >
         urdf_path: $(arg urdf_path)
         servo_config_path: $(arg servo_config_path)

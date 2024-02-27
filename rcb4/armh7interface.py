@@ -180,7 +180,7 @@ class ARMH7Interface(object):
         if port is not None:
             for cand in ports:
                 if cand.device == port:
-                    if port.vid == 0x165C and port.pid == 0x0008:
+                    if cand.vid == 0x165C and cand.pid == 0x0008:
                         interface = RCB4Interface()
                         interface.open(port)
                         return interface
