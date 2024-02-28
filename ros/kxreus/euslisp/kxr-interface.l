@@ -5,10 +5,10 @@
 
 
 (defun load-robot-model (&key (port 8000) (namespace nil))
-  (let* ((port "8000")
-         (hash-param-name (if namespace (format nil "~A~A" namespace "/eusmodel_hash") "/eusmodel_hash"))
+  (let* ((hash-param-name (if namespace (format nil "~A~A" namespace "/eusmodel_hash") "/eusmodel_hash"))
          (robot-name-param-name (if namespace (format nil "~A~A" namespace "/eus_robot_name") "/eus_robot_name"))
          hash robot-name outpath server-url)
+    (setq port (truncate port))
     (while (null hash)
       (ros::ros-info (format nil "Waiting rosparam ~A" hash-param-name))
       (setq hash (ros::get-param hash-param-name nil))
