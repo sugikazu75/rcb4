@@ -34,7 +34,7 @@ class EusModelServer(object):
         robot_model = None
 
         rospack = rospkg.RosPack()
-        kxreus_path = rospack.get_path('kxreus')
+        kxr_models_path = rospack.get_path('kxr_models')
 
         while not rospy.is_shutdown():
             rate.sleep()
@@ -51,7 +51,8 @@ class EusModelServer(object):
                 previous_md5sum = md5sum
 
                 eus_path = os.path.join(
-                    kxreus_path, 'models', '{}.l'.format(md5sum))
+                    kxr_models_path, 'models',
+                    'euslisp', '{}.l'.format(md5sum))
                 robot_name = robot_model.urdf_robot_model.name
                 if os.path.exists(eus_path):
                     rospy.set_param(self.clean_namespace + '/eus_robot_name',
