@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from http.server import HTTPServer
 from http.server import SimpleHTTPRequestHandler
@@ -63,15 +63,10 @@ if __name__ == '__main__':
     rospy.init_node('http_server_node')
 
     rospack = rospkg.RosPack()
-    kxreus_path = rospack.get_path('kxreus')
+    kxreus_path = rospack.get_path('kxr_models')
     www_directory = os.path.join(kxreus_path, 'models')
 
-    full_namespace = rospy.get_namespace()
-    last_slash_pos = full_namespace.rfind('/')
-    clean_namespace = full_namespace[:last_slash_pos] \
-        if last_slash_pos != 0 else ''
-
-    port = rospy.get_param(clean_namespace + '/port', 8123)
+    port = rospy.get_param('/model_server_port', 8123)
     server = ThreadedHTTPServer(
         '0.0.0.0', port, CustomHTTPRequestHandler, www_directory)
     server.start()

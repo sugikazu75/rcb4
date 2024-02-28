@@ -1,38 +1,15 @@
 #!/usr/bin/env python
 
-import hashlib
 import os
 import tempfile
 
 from filelock import FileLock
+from kxr_models.md5sum_utils import checksum_md5
 import rospkg
 import rospy
 from skrobot.model import RobotModel
 from skrobot.utils.urdf import no_mesh_load_mode
 from urdfeus.urdf2eus import urdf2eus
-
-
-def checksum_md5(filename, blocksize=8192):
-    """Calculate md5sum.
-
-    Parameters
-    ----------
-    filename : str or pathlib.Path
-        input filename.
-    blocksize : int
-        MD5 has 128-byte digest blocks (default: 8192 is 128x64).
-
-    Returns
-    -------
-    md5 : str
-        calculated md5sum.
-    """
-    filename = str(filename)
-    hash_factory = hashlib.md5()
-    with open(filename, 'rb') as f:
-        for chunk in iter(lambda: f.read(blocksize), b''):
-            hash_factory.update(chunk)
-    return hash_factory.hexdigest()
 
 
 class EusModelServer(object):
@@ -57,7 +34,7 @@ class EusModelServer(object):
         robot_model = None
 
         rospack = rospkg.RosPack()
-        kxreus_path = rospack.get_path('kxreus')
+        kxr_models_path = rospack.get_path('kxr_models')
 
         while not rospy.is_shutdown():
             rate.sleep()
@@ -74,7 +51,8 @@ class EusModelServer(object):
                 previous_md5sum = md5sum
 
                 eus_path = os.path.join(
-                    kxreus_path, 'models', '{}.l'.format(md5sum))
+                    kxr_models_path, 'models',
+                    'euslisp', '{}.l'.format(md5sum))
                 robot_name = robot_model.urdf_robot_model.name
                 if os.path.exists(eus_path):
                     rospy.set_param(self.clean_namespace + '/eus_robot_name',
