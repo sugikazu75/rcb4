@@ -1,6 +1,7 @@
+import functools
 import os.path as osp
 from urllib.parse import urlparse
-import functools
+
 import rospkg
 
 

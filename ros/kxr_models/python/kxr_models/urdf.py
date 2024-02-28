@@ -1,13 +1,10 @@
-import xml.etree.ElementTree as ET
-import rospkg
-from skrobot.utils.urdf import get_path_with_cache
 import os
-import shutil
-import os.path as osp
 from pathlib import Path
+import shutil
+import xml.etree.ElementTree as ET
 
-from kxr_models.md5sum_utils import checksum_md5
 from kxr_models.compress import make_tarfile
+from kxr_models.md5sum_utils import checksum_md5
 from kxr_models.path import resolve_filepath
 
 
@@ -34,8 +31,9 @@ def aggregate_urdf_mesh_files(input_urdf_path, output_directory,
         if abs_path is not None:
             mesh_robot_md5sum = checksum_md5(abs_path)
             suffix = Path(abs_path).suffix
-            shutil.copy(abs_path, output_dir / '{}{}'.format(mesh_robot_md5sum,
-                                                           suffix))
+            shutil.copy(abs_path,
+                        output_dir / '{}{}'.format(mesh_robot_md5sum,
+                                                   suffix))
             if suffix == '.obj':
                 mtl_path = Path(abs_path).with_suffix('.mtl')
                 if mtl_path.exists():
@@ -50,7 +48,7 @@ def aggregate_urdf_mesh_files(input_urdf_path, output_directory,
             mesh_robot_md5sum = checksum_md5(abs_path)
             suffix = Path(abs_path).suffix
             shutil.copy(abs_path, output_dir / '{}{}'.format(mesh_robot_md5sum,
-                                                           suffix))
+                                                             suffix))
             mesh.set('filename',
                      f'package://kxr_models/models/urdf/{robot_md5sum}/{mesh_robot_md5sum}{suffix}')  # NOQA
     output_urdf_path = output_dir / '{}.urdf'.format(root.get('name'))

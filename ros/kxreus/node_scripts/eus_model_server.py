@@ -4,13 +4,12 @@ import os
 import tempfile
 
 from filelock import FileLock
+from kxr_models.md5sum_utils import checksum_md5
 import rospkg
 import rospy
 from skrobot.model import RobotModel
 from skrobot.utils.urdf import no_mesh_load_mode
 from urdfeus.urdf2eus import urdf2eus
-
-from kxr_models.md5sum_utils import checksum_md5
 
 
 class EusModelServer(object):

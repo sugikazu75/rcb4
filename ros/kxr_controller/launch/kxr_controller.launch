@@ -31,7 +31,9 @@
         use_rcb4: $(arg use_rcb4)
       </rosparam>
     </node>
-
+    <node name="urdf_model_server"
+          pkg="kxr_models" type="urdf_model_server.py" >
+    </node>
   </group>
 
   <group unless="$(eval len(arg('namespace')) > 0)">
@@ -51,6 +53,9 @@
       </rosparam>
     </node>
 
+    <node name="urdf_model_server"
+          pkg="kxr_models" type="urdf_model_server.py" >
+    </node>
   </group>
 
 </launch>

@@ -2,10 +2,12 @@
 
 import os.path as osp
 
-import rospy
+import gdown
 import rosgraph
 import rospkg
-import gdown
+import rospy
+import tf
+from urdf_parser_py.urdf import URDF
 
 
 if __name__ == '__main__':
@@ -35,3 +37,17 @@ if __name__ == '__main__':
             path=compressed_urdf_path)
     gdown.extractall(osp.join(kxr_models_path, 'models', 'urdf',
                               "{}.tar.gz".format(urdf_hash)))
+
+    if rospy.get_param('~connect_tf', False):
+        robot = URDF.from_parameter_server(
+            key=clean_namespace + '/robot_description')
+        root_link = robot.get_root()
+
+        rate = rospy.Rate(1)
+        while not rospy.is_shutdown():
+            br = tf.TransformBroadcaster()
+            br.sendTransform((0, 0, 0),
+                             (0, 0, 0, 1),
+                             rospy.Time.now(),
+                             root_link,
+                             "map")

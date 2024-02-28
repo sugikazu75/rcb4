@@ -17,6 +17,7 @@
   <depend>rviz</depend>
   <depend>joint_state_publisher_gui</depend>
   <depend>gazebo</depend>
+  <depend>urdfdom_py</depend>
 
   <export>
     <architecture_independent />

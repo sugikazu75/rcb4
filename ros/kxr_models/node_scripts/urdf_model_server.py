@@ -5,11 +5,10 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 from filelock import FileLock
-import rospkg
-import rospy
-
 from kxr_models.md5sum_utils import checksum_md5
 from kxr_models.urdf import aggregate_urdf_mesh_files
+import rospkg
+import rospy
 
 
 class URDFModelServer(object):
@@ -22,8 +21,6 @@ class URDFModelServer(object):
 
     def run(self):
         rate = rospy.Rate(1)
-
-        previous_md5sum = None
 
         rospack = rospkg.RosPack()
         kxr_models_path = rospack.get_path('kxr_models')
@@ -50,10 +47,12 @@ class URDFModelServer(object):
 
                     rospy.set_param(self.clean_namespace + '/urdf_hash',
                                     md5sum)
-                    with open(os.path.join(kxr_models_path, 'models', 'urdf',
-                                           md5sum, '{}.urdf'.format(robot_name))) as f:
-                              rospy.set_param(self.clean_namespace + '/robot_description_viz',
-                                              f.read())
+                    with open(os.path.join(
+                            kxr_models_path, 'models', 'urdf',
+                            md5sum, '{}.urdf'.format(robot_name))) as f:
+                        rospy.set_param(
+                            self.clean_namespace + '/robot_description_viz',
+                            f.read())
                     continue
 
                 lock_path = compressed_urdf_path + ".lock"
