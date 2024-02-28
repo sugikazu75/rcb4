@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import hashlib
 import os
 import tempfile
 
@@ -11,28 +10,7 @@ from skrobot.model import RobotModel
 from skrobot.utils.urdf import no_mesh_load_mode
 from urdfeus.urdf2eus import urdf2eus
 
-
-def checksum_md5(filename, blocksize=8192):
-    """Calculate md5sum.
-
-    Parameters
-    ----------
-    filename : str or pathlib.Path
-        input filename.
-    blocksize : int
-        MD5 has 128-byte digest blocks (default: 8192 is 128x64).
-
-    Returns
-    -------
-    md5 : str
-        calculated md5sum.
-    """
-    filename = str(filename)
-    hash_factory = hashlib.md5()
-    with open(filename, 'rb') as f:
-        for chunk in iter(lambda: f.read(blocksize), b''):
-            hash_factory.update(chunk)
-    return hash_factory.hexdigest()
+from kxr_models.md5sum_utils import checksum_md5
 
 
 class EusModelServer(object):

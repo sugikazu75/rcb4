@@ -8,6 +8,12 @@
   <arg name="control_loop_rate" default="20" />
   <arg name="use_rcb4" default="false" doc="Flag to use RCB4 mini board"/>
   <arg name="device" default="" doc="Device path"/>
+  <arg name="model_server_port" default="8123" />
+
+  <param name="/model_server_port" value="$(arg model_server_port)" />
+  <node name="http_server_node"
+        pkg="kxr_models" type="http_server_node.py" >
+  </node>
 
   <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
     <param name="control_loop_rate" value="$(arg control_loop_rate)" />

@@ -63,10 +63,10 @@ if __name__ == '__main__':
     rospy.init_node('http_server_node')
 
     rospack = rospkg.RosPack()
-    kxreus_path = rospack.get_path('kxreus')
+    kxreus_path = rospack.get_path('kxr_models')
     www_directory = os.path.join(kxreus_path, 'models')
 
-    port = rospy.get_param('/mesh_server_port', 8123)
+    port = rospy.get_param('/model_server_port', 8123)
     server = ThreadedHTTPServer(
         '0.0.0.0', port, CustomHTTPRequestHandler, www_directory)
     server.start()

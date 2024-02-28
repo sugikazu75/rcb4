@@ -4,6 +4,8 @@ project(kxr_models)
 
 find_package(catkin REQUIRED)
 
+catkin_python_setup()
+
 catkin_package()
 
 find_package(roslaunch)
