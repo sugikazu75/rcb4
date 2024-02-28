@@ -18,6 +18,7 @@
   <!-- ALPHABETICAL ORDER -->
 
   <!-- ALPHABETICAL ORDER -->
+  <build_depend>pr2eus</build_depend>
   <build_depend>roseus</build_depend>
   <!-- ALPHABETICAL ORDER -->
 

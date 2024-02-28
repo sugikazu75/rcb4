@@ -120,6 +120,7 @@ class RCB4ROSBridge(object):
         last_slash_pos = full_namespace.rfind('/')
         clean_namespace = full_namespace[:last_slash_pos] \
             if last_slash_pos != 0 else ''
+        self.clean_namespace = clean_namespace
 
         set_robot_description(
             urdf_path,
@@ -344,7 +345,8 @@ class RCB4ROSBridge(object):
         return msg
 
     def run(self):
-        rate = rospy.Rate(100)
+        rate = rospy.Rate(rospy.get_param(
+            self.clean_namespace + '/control_loop_rate', 20))
 
         while not rospy.is_shutdown():
             if self.interface.is_opened() is False:
