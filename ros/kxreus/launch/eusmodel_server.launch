@@ -1,12 +1,15 @@
 <launch>
 
   <arg name="namespace" default="" />
-  <arg name="mesh_server_port" default="8123" />
+  <arg name="model_server_port" default="8123" />
+  <arg name="launch_model_server" default="false" />
 
-  <param name="/mesh_server_port" value="$(arg mesh_server_port)" />
-  <node name="http_server_node"
-        pkg="kxreus" type="http_server_node.py" >
-  </node>
+  <group if="$(arg launch_model_server)" >
+    <param name="/model_server_port" value="$(arg model_server_port)" />
+    <node name="http_server_node"
+          pkg="kxr_models" type="http_server_node.py" >
+    </node>
+  </group>
 
   <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
     <node name="eusmodel_server"
