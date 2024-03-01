@@ -2,6 +2,8 @@
 
   <arg name="urdf_path" default="$(find kxr_models)/urdf/kxrmw4a6h2m.urdf" />
   <arg name="servo_config_path" default="$(find kxr_models)/config/kxrmw4a6h2m_servo_config.yaml" />
+  <arg name="publish_imu" default="true" />
+  <arg name="publish_sensor" default="false" />
   <arg name="use_rcb4" default="false" doc="Flag to use RCB4 mini board"/>
   <arg name="device" default="" doc="Device path"/>
   <arg name="model_server_port" default="8123" />
@@ -12,6 +14,8 @@
     <arg name="use_rcb4" value="$(arg use_rcb4)" />
     <arg name="device" value="$(arg device)" />
     <arg name="model_server_port" value="$(arg model_server_port)" />
+    <arg name="publish_imu" value="$(arg publish_imu)" />
+    <arg name="publish_sensor" value="$(arg publish_sensor)" />
   </include>
 
   <include file="$(find kxr_controller)/launch/diff_drive_controller.launch" />

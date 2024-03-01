@@ -4,6 +4,7 @@
   <arg name="servo_config_path" default="$(find kxr_models)/config/kxrl2l2a6h2m_servo_config.yaml" />
   <arg name="namespace" default="" />
   <arg name="publish_imu" default="true" />
+  <arg name="publish_sensor" default="false" />
   <arg name="imu_frame_id" default="/bodyset94472077639384" />
   <arg name="control_loop_rate" default="20" />
   <arg name="use_rcb4" default="false" doc="Flag to use RCB4 mini board"/>
@@ -27,6 +28,7 @@
         urdf_path: $(arg urdf_path)
         servo_config_path: $(arg servo_config_path)
         publish_imu: $(arg publish_imu)
+        publish_sensor: $(arg publish_sensor)
         imu_frame_id: $(arg namespace)/$(arg imu_frame_id)
         use_rcb4: $(arg use_rcb4)
       </rosparam>
@@ -48,6 +50,7 @@
         urdf_path: $(arg urdf_path)
         servo_config_path: $(arg servo_config_path)
         publish_imu: $(arg publish_imu)
+        publish_sensor: $(arg publish_sensor)
         imu_frame_id: $(arg imu_frame_id)
         use_rcb4: $(arg use_rcb4)
       </rosparam>
