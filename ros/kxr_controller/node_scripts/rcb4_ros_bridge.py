@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 import actionlib
+import geometry_msgs.msg
 from kxr_controller.msg import ServoOnOffAction
 from kxr_controller.msg import ServoOnOffResult
 import numpy as np
@@ -194,8 +195,10 @@ class RCB4ROSBridge(object):
             clean_namespace)
 
         self.publish_imu = rospy.get_param('~publish_imu', True)
+        self.publish_sensor = rospy.get_param('~publish_sensor', False)
         if self.interface.__class__.__name__ == 'RCB4Interface':
             self.publish_imu = False
+            self.publish_sensor = False
         if self.publish_imu:
             self.imu_frame_id = rospy.get_param(
                 '~imu_frame_id', clean_namespace + '/' + r.root_link.name)
@@ -203,6 +206,8 @@ class RCB4ROSBridge(object):
                 clean_namespace + '/imu',
                 sensor_msgs.msg.Imu,
                 queue_size=1)
+        if self.publish_sensor:
+            self._sensor_publisher_dict = {}
 
     def __del__(self):
         if self.proc_controller_spawner:
@@ -344,6 +349,26 @@ class RCB4ROSBridge(object):
          msg.linear_acceleration.z) = acc
         return msg
 
+    def publish_sensor_values(self):
+        stamp = rospy.Time.now()
+        msg = geometry_msgs.msg.WrenchStamped()
+        msg.header.stamp = stamp
+        for sensor in self.interface.all_jointbase_sensors():
+            for i in range(4):
+                for typ in ['proximity', 'force']:
+                    key = 'kjs_{}_{}_{}'.format(sensor.id, typ, i)
+                    if typ == 'proximity':
+                        msg.wrench.force.x = sensor.ps[i]
+                    elif typ == 'force':
+                        msg.wrench.force.x = sensor.adc[i]
+                    if key not in self._sensor_publisher_dict:
+                        self._sensor_publisher_dict[key] = rospy.Publisher(
+                            self.clean_namespace
+                            + '/kjs/{}/{}/{}'.format(sensor.id, typ, i),
+                            geometry_msgs.msg.WrenchStamped,
+                            queue_size=1)
+                    self._sensor_publisher_dict[key].publish(msg)
+
     def run(self):
         rate = rospy.Rate(rospy.get_param(
             self.clean_namespace + '/control_loop_rate', 20))
@@ -376,6 +401,8 @@ class RCB4ROSBridge(object):
             if self.publish_imu and self.imu_publisher.get_num_connections():
                 imu_msg = self.create_imu_message()
                 self.imu_publisher.publish(imu_msg)
+            if self.publish_sensor:
+                self.publish_sensor_values()
             rate.sleep()
 
 
