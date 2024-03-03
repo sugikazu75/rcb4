@@ -14,6 +14,7 @@ import numpy as np
 import rospy
 import sensor_msgs.msg
 from sensor_msgs.msg import JointState
+import serial
 from skrobot.model import RobotModel
 from skrobot.utils.urdf import no_mesh_load_mode
 import yaml
@@ -353,7 +354,12 @@ class RCB4ROSBridge(object):
         stamp = rospy.Time.now()
         msg = geometry_msgs.msg.WrenchStamped()
         msg.header.stamp = stamp
-        for sensor in self.interface.all_jointbase_sensors():
+        try:
+            sensors = self.interface.all_jointbase_sensors()
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[publish_sensor_values] {}'.format(str(e)))
+            return
+        for sensor in sensors:
             for i in range(4):
                 for typ in ['proximity', 'force']:
                     key = 'kjs_{}_{}_{}'.format(sensor.id, typ, i)

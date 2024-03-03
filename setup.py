@@ -57,4 +57,9 @@ setup(
     zip_safe=False,
     setup_requires=setup_requires,
     install_requires=install_requires,
+    entry_points={
+        "console_scripts": [
+            "rcb4-write-firmware=rcb4.apps.write_firmware:main",
+        ],
+    },
 )
