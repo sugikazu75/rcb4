@@ -115,7 +115,7 @@ def padding_bytearray(ba, n):
 
 class ARMH7Interface(object):
 
-    def __init__(self):
+    def __init__(self, timeout=0.1):
         self.lock = Lock()
         self.serial = None
         self.id_vector = None
@@ -127,6 +127,7 @@ class ARMH7Interface(object):
         self._joint_to_actuator_matrix = None
         self._actuator_to_joint_matrix = None
         self._worm_ref_angle = None
+        self._default_timeout = timeout
 
     def __del__(self):
         self.close()
@@ -236,9 +237,11 @@ class ARMH7Interface(object):
             ret = self.serial_read()
         return ret
 
-    def serial_read(self, timeout=10):
+    def serial_read(self, timeout=None):
         if self.serial is None:
             raise RuntimeError('Serial is not opened.')
+        if timeout is None:
+            timeout = self._default_timeout
 
         start_time = time.time()
         read_data = b''
