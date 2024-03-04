@@ -373,6 +373,8 @@ class RCB4ROSBridge(object):
                             + '/kjs/{}/{}/{}'.format(sensor.id, typ, i),
                             geometry_msgs.msg.WrenchStamped,
                             queue_size=1)
+                    msg.header.frame_id = 'kjs_{}_{}_frame'.format(
+                        sensor.id, i)
                     self._sensor_publisher_dict[key].publish(msg)
 
     def run(self):
