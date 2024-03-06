@@ -195,8 +195,10 @@ struct SystemStruct
   uint32_t prev_time;
   float dt;
   float prev_dt;
-  uint8_t *rom_flash; // FLASH area for RCB4 ROM area requires 256KB
-  uint8_t *rom_memory; // FLASH area for RCB4 ROM area requires 256KB
+  // The type of rom_flash and rom_memory has been changed from uint8_t* to uint32_t.
+  // This is because pointers are 32 bits length in the STM32 chip in the kondoh7 board.
+  uint32_t rom_flash; // FLASH area for RCB4 ROM area requires 256KB
+  uint32_t rom_memory; // FLASH area for RCB4 ROM area requires 256KB
   uint16_t ad_value;
   uint16_t servo_cnt;
   float battery_voltage;
@@ -216,7 +218,7 @@ struct SystemStruct
   uint8_t ics_comm_stop[6]; // for handshake 6 UARTs param setting
   uint32_t frame_time; // used for ICS comm cycle in uarttasks.c
 };
-""")
+""")  # NOQA
 SystemStruct.__name__ = 'SysB'
 
 

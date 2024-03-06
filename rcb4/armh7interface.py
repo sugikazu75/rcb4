@@ -536,6 +536,9 @@ class ARMH7Interface(object):
         self.search_worm_ids()
         self.search_servo_ids()
 
+    def battery_voltage(self):
+        return self.memory_cstruct(SystemStruct).battery_voltage
+
     def search_servo_ids(self):
         if self.servo_sorted_ids is not None:
             return self.servo_sorted_ids
