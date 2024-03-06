@@ -218,7 +218,7 @@ struct SystemStruct
   uint8_t ics_comm_stop[6]; // for handshake 6 UARTs param setting
   uint32_t frame_time; // used for ICS comm cycle in uarttasks.c
 };
-""")
+""")  # NOQA
 SystemStruct.__name__ = 'SysB'
 
 
