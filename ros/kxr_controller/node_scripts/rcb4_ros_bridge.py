@@ -305,12 +305,11 @@ class RCB4ROSBridge(object):
         if self._prev_velocity_command is not None and np.allclose(
                 self._prev_velocity_command, av):
             return
-        self._prev_velocity_command = av
         try:
             self.interface.angle_vector(av, servo_ids, velocity=0)
-        except RuntimeError as e:
-            self.unsubscribe()
-            rospy.signal_shutdown('Disconnected {}.'.format(e))
+            self._prev_velocity_command = av
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[velocity_command_joint] {}'.format(str(e)))
 
     def command_joint_state_callback(self, msg):
         av, servo_ids = self._msg_to_angle_vector_and_servo_ids(
@@ -319,9 +318,8 @@ class RCB4ROSBridge(object):
             return
         try:
             self.interface.angle_vector(av, servo_ids, velocity=1)
-        except RuntimeError as e:
-            self.unsubscribe()
-            rospy.signal_shutdown('Disconnected {}.'.format(e))
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[command_joint] {}'.format(str(e)))
 
     def servo_on_off_callback(self, goal):
         servo_vector = []
@@ -395,6 +393,26 @@ class RCB4ROSBridge(object):
             std_msgs.msg.Float32(
                 data=volt))
 
+    def publish_joint_states(self):
+        try:
+            av = self.interface.angle_vector()
+            torque_vector = self.interface.servo_error()
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[publish_joint_states] {}'.format(str(e)))
+            return
+        msg = JointState()
+        msg.header.stamp = rospy.Time.now()
+        for name in self.joint_names:
+            if name in self.joint_name_to_id:
+                servo_id = self.joint_name_to_id[name]
+                idx = self.interface.servo_id_to_index(servo_id)
+                if idx is None:
+                    continue
+                msg.position.append(np.deg2rad(av[idx]))
+                msg.effort.append(torque_vector[idx])
+                msg.name.append(name)
+        self.current_joint_states_pub.publish(msg)
+
     def run(self):
         rate = rospy.Rate(rospy.get_param(
             self.clean_namespace + '/control_loop_rate', 20))
@@ -404,25 +422,7 @@ class RCB4ROSBridge(object):
                 self.unsubscribe()
                 rospy.signal_shutdown('Disconnected.')
                 break
-            try:
-                av = self.interface.angle_vector()
-                torque_vector = self.interface.servo_error()
-            except RuntimeError as e:
-                self.unsubscribe()
-                rospy.signal_shutdown('Disconnected {}.'.format(e))
-                break
-            msg = JointState()
-            msg.header.stamp = rospy.Time.now()
-            for name in self.joint_names:
-                if name in self.joint_name_to_id:
-                    servo_id = self.joint_name_to_id[name]
-                    idx = self.interface.servo_id_to_index(servo_id)
-                    if idx is None:
-                        continue
-                    msg.position.append(np.deg2rad(av[idx]))
-                    msg.effort.append(torque_vector[idx])
-                    msg.name.append(name)
-            self.current_joint_states_pub.publish(msg)
+            self.publish_joint_states()
 
             if self.publish_imu and self.imu_publisher.get_num_connections():
                 imu_msg = self.create_imu_message()
