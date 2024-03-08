@@ -7,6 +7,7 @@ import threading
 
 from filelock import FileLock
 from filelock import Timeout
+from kxr_models.ros import get_namespace
 import rospkg
 import rospy
 
@@ -66,7 +67,7 @@ if __name__ == '__main__':
     kxreus_path = rospack.get_path('kxr_models')
     www_directory = os.path.join(kxreus_path, 'models')
 
-    port = rospy.get_param('/model_server_port', 8123)
+    port = rospy.get_param(get_namespace() + '/model_server_port', 8123)
     server = ThreadedHTTPServer(
         '0.0.0.0', port, CustomHTTPRequestHandler, www_directory)
     server.start()
