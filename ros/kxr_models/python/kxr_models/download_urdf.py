@@ -2,27 +2,27 @@ import os.path as osp
 
 import gdown
 from kxr_models.ros import get_namespace
-import rosgraph
 import rospkg
 import rospy
 
 
-def download_urdf_mesh_files():
-    clean_namespace = get_namespace()
-    port = rospy.get_param(clean_namespace + '/model_server_port', 8123)
+def download_urdf_mesh_files(namespace=None):
+    if namespace is None:
+        namespace = get_namespace()
+    port = rospy.get_param(namespace + '/model_server_port', 8123)
+    server_ip = rospy.get_param(namespace + '/model_server_ip',
+                                'localhost')
 
-    urdf_hash = rospy.get_param(clean_namespace + '/urdf_hash', None)
+    urdf_hash = rospy.get_param(namespace + '/urdf_hash', None)
     rate = rospy.Rate(1)
     while not rospy.is_shutdown() and urdf_hash is None:
         rate.sleep()
         rospy.loginfo('Waiting rosparam {} set'.format(
-            clean_namespace + '/urdf_hash'))
-        urdf_hash = rospy.get_param(clean_namespace + '/urdf_hash', None)
+            namespace + '/urdf_hash'))
+        urdf_hash = rospy.get_param(namespace + '/urdf_hash', None)
 
-    master = rosgraph.Master("")
-    host = master.lookupNode("/rosout").split(':')[1][2:]
     server_url = "http://{}:{}/urdf/{}.tar.gz".format(
-        host, port, urdf_hash)
+        server_ip, port, urdf_hash)
 
     rospack = rospkg.RosPack()
     kxr_models_path = rospack.get_path('kxr_models')

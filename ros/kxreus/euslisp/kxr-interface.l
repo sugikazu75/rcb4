@@ -4,7 +4,8 @@
 (ros::load-ros-manifest "kxr_controller")
 
 
-(defun load-robot-model (&key (port 8000) (namespace nil))
+(defun load-robot-model (&key (port 8000) (namespace nil)
+                           (server-ip "localhost"))
   (let* ((hash-param-name (if namespace (format nil "~A~A" namespace "/eusmodel_hash") "/eusmodel_hash"))
          (robot-name-param-name (if namespace (format nil "~A~A" namespace "/eus_robot_name") "/eus_robot_name"))
          hash robot-name outpath server-url)
@@ -22,7 +23,7 @@
     (ros::ros-info (format nil "Get rosparam ~A" robot-name-param-name))
 
     (setq outpath (ros::resolve-ros-path (format nil "package://kxreus/models/cache/~A.l" hash)))
-    (setq server-url (format nil "http://~A:~A/~A.l" (ros::get-host) port hash))
+    (setq server-url (format nil "http://~A:~A/euslisp/~A.l" server-ip port hash))
 
     (when (not (probe-file outpath))
       (while (not (= (unix:system (format nil "wget -O ~A ~A" outpath server-url)) 0))
@@ -108,6 +109,7 @@
                    (create-viewer t))
   (unless (boundp '*robot*)
     (setq *robot* (load-robot-model :namespace namespace
+                                    :server-ip (ros::get-param (if namespace (format nil "~A/model_server_ip" namespace) "/model_server_ip") "localhost")
                                     :port (ros::get-param (if namespace (format nil "~A/model_server_port" namespace) "/model_server_port") 8123))))
   (unless (ros::ok) (ros::roseus "kxr_eus_interface"))
   (unless (boundp '*ri*)
