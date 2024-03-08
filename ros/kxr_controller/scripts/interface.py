@@ -22,7 +22,7 @@ def main():
 
     rospy.init_node('kxr_interface', anonymous=True)
 
-    download_urdf_mesh_files()
+    download_urdf_mesh_files(args.namespace)
 
     robot_model = RobotModel()
     robot_model.load_urdf_from_robot_description(
