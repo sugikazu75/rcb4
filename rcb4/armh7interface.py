@@ -695,7 +695,10 @@ class ARMH7Interface(object):
 
     def read_imu_data(self):
         cs = self.memory_cstruct(Madgwick, 0)
+        # MPU9250 acceleration measurement range is +-8g
         acc = convert_data(cs.acc, 8)
+        g = 9.81
+        acc = acc * g
         q_wxyz = np.array([cs.q0, cs.q1, cs.q2, cs.q3], dtype=np.float32)
         norm_q = np.sqrt(np.dot(q_wxyz.T, q_wxyz))
         q_wxyz = q_wxyz / norm_q
