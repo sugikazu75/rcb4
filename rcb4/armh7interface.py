@@ -697,6 +697,8 @@ class ARMH7Interface(object):
         cs = self.memory_cstruct(Madgwick, 0)
         acc = convert_data(cs.acc, 8)
         q_wxyz = np.array([cs.q0, cs.q1, cs.q2, cs.q3], dtype=np.float32)
+        norm_q = np.sqrt(np.dot(q_wxyz.T, q_wxyz))
+        q_wxyz = q_wxyz / norm_q
         gyro = convert_data(cs.gyro, 2000)
         gyro = np.deg2rad(gyro)
         return q_wxyz, acc, gyro
