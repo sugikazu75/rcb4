@@ -343,18 +343,22 @@ class RCB4ROSBridge(object):
             rospy.signal_shutdown('Disconnected {}.'.format(e))
         return self.servo_on_off_server.set_succeeded(ServoOnOffResult())
 
-    def create_imu_message(self):
+    def publish_imu_message(self):
         msg = sensor_msgs.msg.Imu()
         msg.header.frame_id = self.imu_frame_id
         msg.header.stamp = rospy.Time.now()
-        q_wxyz, acc, gyro = self.interface.read_imu_data()
+        try:
+            q_wxyz, acc, gyro = self.interface.read_imu_data()
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[publish_imu] {}'.format(str(e)))
+            return
         (msg.orientation.w, msg.orientation.x,
          msg.orientation.y, msg.orientation.z) = q_wxyz
         (msg.angular_velocity.x, msg.angular_velocity.y,
          msg.angular_velocity.z) = gyro
         (msg.linear_acceleration.x, msg.linear_acceleration.y,
          msg.linear_acceleration.z) = acc
-        return msg
+        self.imu_publisher.publish(msg)
 
     def publish_sensor_values(self):
         stamp = rospy.Time.now()
@@ -425,8 +429,7 @@ class RCB4ROSBridge(object):
             self.publish_joint_states()
 
             if self.publish_imu and self.imu_publisher.get_num_connections():
-                imu_msg = self.create_imu_message()
-                self.imu_publisher.publish(imu_msg)
+                self.publish_imu_message()
             if self.publish_sensor:
                 self.publish_sensor_values()
             if self.publish_battery_voltage:
