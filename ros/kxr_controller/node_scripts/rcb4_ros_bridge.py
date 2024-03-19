@@ -147,6 +147,10 @@ class RCB4ROSBridge(object):
             sys.exit(1)
         self._prev_velocity_command = None
 
+        # set servo ids to rosparam
+        rospy.set_param(clean_namespace + '/servo_ids',
+                        self.interface.search_servo_ids().tolist())
+
         wheel_servo_sorted_ids = []
         for _, info in servo_infos.items():
             if isinstance(info, int):
