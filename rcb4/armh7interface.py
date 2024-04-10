@@ -191,13 +191,11 @@ class ARMH7Interface(object):
 
         interface = ARMH7Interface()
         ret = interface.auto_open()
-        print(ret)
         if ret is True:
             return interface
 
         interface = RCB4Interface()
         ret = interface.auto_open()
-        print(ret)
         if ret is True:
             return interface
 
@@ -761,6 +759,22 @@ class ARMH7Interface(object):
         self.worm_sorted_ids = indices
         return indices
 
+    def calibrate_worm(self, worm_idx, servo_idx, sensor_idx,
+                       magenc_present=None):
+        if magenc_present is None:
+            input(f'Servo ID: {servo_idx}, Sensor ID: {sensor_idx}\n'
+                  'Press Enter to confirm the current angle: ')
+            worm = self.memory_cstruct(WormmoduleStruct, worm_idx)
+            magenc_present = worm.magenc_present
+        self.send_worm_calib_data(
+            worm_idx, servo_idx, sensor_idx,
+            module_type=1,
+            magenc_offset=magenc_present)
+        worm = self.memory_cstruct(WormmoduleStruct, worm_idx)
+        print(f'Magnetic encoder offset for Servo ID {servo_idx} '
+              f'set to: {worm.magenc_init}')
+        return worm.magenc_init
+
     def read_worm_angle(self, idx=0):
         if not 0 <= idx < max_sensor_num:
             print(
@@ -883,7 +897,14 @@ class ARMH7Interface(object):
         self.cstruct_slot(
             DataAddress, 'data_size',
             self.armh7_address['_ebss'] - self.armh7_address['_sdata'])
-        return self.cfunc_call('dataram_to_dataflash', [])
+
+        # The operation databssram_to_dataflash is time-consuming,
+        # hence the default_timeout is temporarily extended.
+        default_timeout = self._default_timeout
+        self._default_timeout = 5.0
+        ret = self.cfunc_call('dataram_to_dataflash', [])
+        self._default_timeout = default_timeout
+        return ret
 
     def set_sidata(self, sidata=None):
         sidata = sidata or self.armh7_address['_sidata']
