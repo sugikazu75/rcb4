@@ -14,6 +14,10 @@ from rcb4.asm import rcb4_checksum
 from rcb4.asm import rcb4_velocity
 
 
+# 4000.0 / 135
+deg_to_servovector = 29.62962962962963
+
+
 class CommandTypes(Enum):
     Move = 0x00
     Jump = 0x0B
@@ -600,7 +604,7 @@ class RCB4Interface(object):
             self._joint_to_actuator_matrix[:, servo_length] = 7500
             self._joint_to_actuator_matrix[servo_length, servo_length] = 1
             for i in range(servo_length):
-                self._joint_to_actuator_matrix[i, i] = 30
+                self._joint_to_actuator_matrix[i, i] = deg_to_servovector
         return self._joint_to_actuator_matrix
 
     @property

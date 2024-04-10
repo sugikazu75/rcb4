@@ -152,11 +152,14 @@ class RCB4ROSBridge(object):
                         self.interface.search_servo_ids().tolist())
 
         wheel_servo_sorted_ids = []
+        trim_vector_servo_ids = []
+        trim_vector_offset = []
         for _, info in servo_infos.items():
             if isinstance(info, int):
                 continue
             servo_id = info['id']
-            direction = info['direction']
+            direction = info.get('direction', 1)
+            offset = info.get('offset', 0)
             if 'type' in info and info['type'] == 'continuous':
                 wheel_servo_sorted_ids.append(servo_id)
             idx = self.interface.servo_id_to_index(servo_id)
@@ -164,6 +167,11 @@ class RCB4ROSBridge(object):
                 continue
             self.interface._joint_to_actuator_matrix[idx, idx] = \
                 direction * self.interface._joint_to_actuator_matrix[idx, idx]
+            trim_vector_servo_ids.append(servo_id)
+            trim_vector_offset.append(direction * offset)
+        if self.interface.__class__.__name__ != 'RCB4Interface':
+            self.interface.trim_vector(
+                trim_vector_offset, trim_vector_servo_ids)
         if self.interface.wheel_servo_sorted_ids is None:
             self.interface.wheel_servo_sorted_ids = wheel_servo_sorted_ids
 
