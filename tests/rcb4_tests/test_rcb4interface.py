@@ -41,12 +41,12 @@ class TestRCB4Interface(unittest.TestCase):
         sv = self.interface.angle_vector_to_servo_angle_vector(
             [30, 60], [32, 34])
         testing.assert_array_almost_equal(
-            sv, [8400, 9300])
+            sv, [8388.888874, 9277.777748])
 
         sv = self.interface.angle_vector_to_servo_angle_vector(
             [30, 60], [34, 32])
         testing.assert_array_almost_equal(
-            sv, [8400, 9300])
+            sv, [8388.888874, 9277.777748])
 
     def test_angle_vector(self):
         self.interface.hold()

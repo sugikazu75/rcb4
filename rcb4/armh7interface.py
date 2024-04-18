@@ -24,6 +24,7 @@ from rcb4.ctype_utils import c_type_to_numpy_format
 from rcb4.ctype_utils import c_type_to_size
 from rcb4.data import kondoh7_elf
 from rcb4.rcb4interface import CommandTypes
+from rcb4.rcb4interface import deg_to_servovector
 from rcb4.rcb4interface import rcb4_dof
 from rcb4.rcb4interface import RCB4Interface
 from rcb4.rcb4interface import ServoParams
@@ -516,6 +517,46 @@ class ARMH7Interface(object):
         tmp_av[seq_indices] = np.array(av)
         return np.matmul(self.joint_to_actuator_matrix, tmp_av)[seq_indices]
 
+    def _trim_servo_vector(self):
+        return np.array(
+            self.read_cstruct_slot_vector(ServoStruct, 'trim'),
+            dtype=np.int16)
+
+    def _set_trim_vector(self, trim_vector=None, servo_ids=None):
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        if len(trim_vector) != len(servo_ids):
+            raise ValueError(
+                'Length of servo_ids and trim_vector must be the same.')
+        if len(trim_vector) == 0:
+            return
+        current_trim_vector = self._trim_servo_vector()
+        current_trim_vector[np.array(servo_ids)] = trim_vector
+        self.write_cstruct_slot_v(ServoStruct, 'trim',
+                                  current_trim_vector)
+
+    def trim_vector(self, av=None, servo_ids=None):
+        if av is not None:
+            trim_av = self.angle_vector_to_servo_angle_vector(
+                av, servo_ids) - 7500
+            return self._set_trim_vector(trim_av, servo_ids)
+        all_servo_ids = self.search_servo_ids()
+        if len(all_servo_ids) == 0:
+            return np.empty(shape=0)
+        trim = np.append(7500 + self._trim_servo_vector()[all_servo_ids], 1)
+        trim_av = np.matmul(trim.T, self.actuator_to_joint_matrix.T)[:-1]
+        if servo_ids is not None:
+            if len(servo_ids) == 0:
+                return np.empty(shape=0)
+            trim_av = trim_av[self.sequentialized_servo_ids(servo_ids)]
+        return trim_av
+
+    def clear_trim_vector(self, write_to_flash=True):
+        self.write_cstruct_slot_v(
+            ServoStruct, 'trim', np.zeros(rcb4_dof))
+        if write_to_flash:
+            self.write_to_flash()
+
     def ics_start(self):
         return self.set_cstruct_slot(SystemStruct, 0, 'ics_comm_stop',
                                      [0, 0, 0, 0, 0, 0])
@@ -874,7 +915,13 @@ class ARMH7Interface(object):
         return self.cfunc_call('buzzer_init_sound', [])
 
     def write_to_flash(self):
-        return self.cfunc_call('rom_to_flash', [])
+        # The operation write_to_flash is time-consuming,
+        # hence the default_timeout is temporarily extended.
+        default_timeout = self._default_timeout
+        self._default_timeout = 5.0
+        ret = self.cfunc_call('rom_to_flash', [])
+        self._default_timeout = default_timeout
+        return ret
 
     def set_data_address(self):
         self.set_sidata()
@@ -970,6 +1017,9 @@ class ARMH7Interface(object):
                 elif typ == 'uint16':
                     v = int(round(v))
                     struct.pack_into('<H', byte_list, 10 + i * esize, v)
+                elif typ == 'int16':
+                    v = int(round(v))
+                    struct.pack_into('<h', byte_list, 10 + i * esize, v)
                 elif typ == 'uint32':
                     v = int(round(v))
                     struct.pack_into('<I', byte_list, 10 + i * esize, v)
@@ -1023,7 +1073,7 @@ class ARMH7Interface(object):
             self._joint_to_actuator_matrix[:, servo_length] = 7500
             self._joint_to_actuator_matrix[servo_length, servo_length] = 1
             for i in range(servo_length):
-                self._joint_to_actuator_matrix[i, i] = 30
+                self._joint_to_actuator_matrix[i, i] = deg_to_servovector
         return self._joint_to_actuator_matrix
 
     @property
