@@ -14,7 +14,7 @@ catkin_install_python(
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 find_package(roslaunch)
-foreach(dir config meshes urdf)
+foreach(dir config meshes urdf models)
 	install(DIRECTORY ${dir}/
 		DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/${dir})
 endforeach(dir)

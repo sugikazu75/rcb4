@@ -22,6 +22,10 @@ endif()
 get_filename_component(RCB4_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
 message(STATUS "RCB4 Directory: ${RCB4_DIR}")
 
+# Command to copy the modified requirements.in to requirements.in.with_rcb4
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/requirements.in ${CMAKE_CURRENT_SOURCE_DIR}/requirements.in.with_rcb4 COPYONLY)
+file(APPEND ${CMAKE_CURRENT_SOURCE_DIR}/requirements.in.with_rcb4 "${RCB4_DIR}\n")
+
 find_package(catkin REQUIRED COMPONENTS
   catkin_virtualenv
   actionlib
@@ -52,27 +56,11 @@ catkin_package(
 )
 
 catkin_generate_virtualenv(
-  INPUT_REQUIREMENTS requirements.in
+  INPUT_REQUIREMENTS requirements.in.with_rcb4
   PYTHON_INTERPRETER python3
   USE_SYSTEM_PACKAGES TRUE
   ISOLATE_REQUIREMENTS FALSE
   CHECK_VENV FALSE
-)
-
-set(_python "${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_SHARE_DESTINATION}/venv/bin/python")
-set(_venv_setup "${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_SHARE_DESTINATION}/venv/bin/activate")
-
-add_custom_command(
-  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/after_venv_script"
-  COMMAND echo "${_python} -m pip install ${RCB4_DIR}"
-  COMMAND . ${_venv_setup} && ${_python} -m pip install ${RCB4_DIR}
-  DEPENDS ${PROJECT_NAME}_generate_virtualenv ${_venv_setup} ${_python}
-)
-
-
-add_custom_target(
-  run_after_venv ALL
-  DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/after_venv_script"
 )
 
 include_directories(
@@ -100,6 +88,12 @@ install(FILES requirements.txt
 install(TARGETS kxr_controller
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+foreach(dir launch)
+	install(DIRECTORY ${dir}/
+		DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/${dir})
+endforeach(dir)
+
 
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
