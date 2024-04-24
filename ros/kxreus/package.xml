@@ -19,10 +19,11 @@
   <!-- ALPHABETICAL ORDER -->
 
   <!-- ALPHABETICAL ORDER -->
-  <build_depend>kxr_controller</build_depend>
-  <build_depend>kxr_models</build_depend>
-  <build_depend>pr2eus</build_depend>
-  <build_depend>roseus</build_depend>
+  <exec_depend>kxr_controller</exec_depend>
+  <exec_depend>kxr_models</exec_depend>
+  <exec_depend>pr2eus</exec_depend>
+  <exec_depend>roseus</exec_depend>
+  <exec_depend>wget</exec_depend>
   <!-- ALPHABETICAL ORDER -->
 
   <export>
