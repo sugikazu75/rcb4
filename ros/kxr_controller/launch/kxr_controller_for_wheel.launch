@@ -9,6 +9,7 @@
   <arg name="device" default="" doc="Device path"/>
   <arg name="model_server_port" default="8123" />
   <arg name="namespace" default="" />
+  <arg name="joint_group_description" default="" />
 
   <include file="$(find kxr_controller)/launch/kxr_controller.launch" >
     <arg name="urdf_path" value="$(arg urdf_path)" />
@@ -20,6 +21,7 @@
     <arg name="publish_sensor" value="$(arg publish_sensor)" />
     <arg name="publish_battery_voltage" value="$(arg publish_battery_voltage)" />
     <arg name="namespace" value="$(arg namespace)" />
+    <arg name="joint_group_description" value="$(arg joint_group_description)" />
   </include>
 
   <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
