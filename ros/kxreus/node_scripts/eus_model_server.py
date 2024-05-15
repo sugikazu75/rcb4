@@ -10,6 +10,7 @@ import rospy
 from skrobot.model import RobotModel
 from skrobot.utils.urdf import no_mesh_load_mode
 from urdfeus.urdf2eus import urdf2eus
+import yaml
 
 
 class EusModelServer(object):
@@ -61,18 +62,34 @@ class EusModelServer(object):
                                     md5sum)
                     continue
 
+                joint_group_description = rospy.get_param(
+                    self.clean_namespace + '/joint_group_description',
+                    None)
+                tmp_joint_description_file = None
+                if joint_group_description is not None:
+                    tmp_joint_description_file = tempfile.mktemp(
+                        suffix='.yaml')
+                    with open(tmp_joint_description_file, 'w') as f:
+                        yaml.dump(joint_group_description, f)
+
                 lock_path = eus_path + ".lock"
                 lock = FileLock(lock_path, timeout=10)
                 try:
                     with lock:
                         with open(eus_path, 'w') as f:
-                            urdf2eus(tmp_file, fp=f)
+                            urdf2eus(
+                                tmp_file,
+                                config_yaml_path=tmp_joint_description_file,
+                                fp=f)
                         rospy.loginfo(
                             'Eusmodel is saved to {}'.format(eus_path))
                     os.remove(lock_path)
                 finally:
                     if os.path.exists(tmp_file):
                         os.remove(tmp_file)
+                    if tmp_joint_description_file is not None \
+                       and os.path.exists(tmp_joint_description_file):
+                        os.remove(tmp_joint_description_file)
 
 
 if __name__ == '__main__':

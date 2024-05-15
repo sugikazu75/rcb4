@@ -1,2 +1,2 @@
 scikit-robot
-urdfeus
+urdfeus>=0.0.10

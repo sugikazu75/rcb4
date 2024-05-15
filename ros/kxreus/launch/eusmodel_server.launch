@@ -13,13 +13,15 @@
 
   <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
     <node name="eusmodel_server"
-          pkg="kxreus" type="eus_model_server.py" >
+          pkg="kxreus" type="eus_model_server.py"
+          output="screen" >
     </node>
   </group>
 
   <group unless="$(eval len(arg('namespace')) > 0)">
     <node name="eusmodel_server"
-          pkg="kxreus" type="eus_model_server.py" >
+          pkg="kxreus" type="eus_model_server.py"
+          output="screen" >
     </node>
   </group>
 

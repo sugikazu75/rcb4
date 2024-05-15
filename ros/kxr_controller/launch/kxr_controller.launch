@@ -11,6 +11,7 @@
   <arg name="use_rcb4" default="false" doc="Flag to use RCB4 mini board"/>
   <arg name="device" default="" doc="Device path"/>
   <arg name="model_server_port" default="8123" />
+  <arg name="joint_group_description" default="" />
 
   <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
     <param name="control_loop_rate" value="$(arg control_loop_rate)" />
@@ -18,6 +19,11 @@
     <node name="http_server_node"
           pkg="kxr_models" type="http_server_node.py" >
     </node>
+
+    <group if="$(eval len(arg('joint_group_description')) > 0)"
+           ns="joint_group_description" >
+      <rosparam command="load" file="$(arg joint_group_description)" subst_value="true"/>
+    </group>
 
     <node name="rcb4_ros_bridge"
           pkg="kxr_controller" type="rcb4_ros_bridge.py"
@@ -46,6 +52,11 @@
     <node name="http_server_node"
           pkg="kxr_models" type="http_server_node.py" >
     </node>
+
+    <group if="$(eval len(arg('joint_group_description')) > 0)"
+           ns="joint_group_description" >
+      <rosparam command="load" file="$(arg joint_group_description)" subst_value="true"/>
+    </group>
 
     <node name="rcb4_ros_bridge"
           pkg="kxr_controller" type="rcb4_ros_bridge.py"
