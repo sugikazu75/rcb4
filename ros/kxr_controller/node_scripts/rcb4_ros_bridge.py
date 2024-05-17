@@ -413,6 +413,9 @@ class RCB4ROSBridge(object):
         try:
             av = self.interface.angle_vector()
             torque_vector = self.interface.servo_error()
+        except IndexError as e:
+            rospy.logerr('[publish_joint_states] {}'.format(str(e)))
+            return
         except serial.serialutil.SerialException as e:
             rospy.logerr('[publish_joint_states] {}'.format(str(e)))
             return
