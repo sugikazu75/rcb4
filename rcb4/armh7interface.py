@@ -38,6 +38,7 @@ from rcb4.struct_header import ServoStruct
 from rcb4.struct_header import SystemStruct
 from rcb4.struct_header import WormmoduleStruct
 from rcb4.units import convert_data
+from rcb4.usb_utils import reset_usb_device
 
 
 armh7_variable_list = [
@@ -154,6 +155,10 @@ class ARMH7Interface(object):
         serial.SerialException
             If there is an error opening the serial port.
         """
+        # Reset the USB device before opening the serial port
+        reset_usb_device(port)
+        # Wait for 2 seconds to ensure the device is properly reset
+        time.sleep(2.0)
         try:
             self.serial = serial.Serial(port, baudrate, timeout=timeout)
             print(f"Opened {port} at {baudrate} baud")
