@@ -1,4 +1,5 @@
 import serial
+import serial.tools.list_ports
 import usb1
 
 
@@ -23,7 +24,11 @@ def get_vendor_id_and_product_id(port):
     ports = serial.tools.list_ports.comports()
     for p in ports:
         if p.device == port:
-            return p.vid, p.pid
+            if p.vid is not None and p.pid is not None:
+                return p.vid, p.pid
+            else:
+                raise ValueError(
+                    f'No USB device information found for port {port}')
     raise ValueError(f'Could not find USB device information for port {port}')
 
 
@@ -54,3 +59,25 @@ def reset_usb_device(port):
     # Reset the USB device
     handle.resetDevice()
     print(f"USB device {vendor_id:04x}:{product_id:04x} has been reset.")
+
+
+def reset_serial_port(port):
+    """Reset the serial port if it is a USB serial port.
+
+    Parameters
+    ----------
+    port : str
+        The serial port to be reset.
+
+    Raises
+    ------
+    ValueError
+        If the port is not a USB serial port.
+    """
+    try:
+        # Try to get vendor ID and product ID to determine if it's a USB device
+        reset_usb_device(port)
+    except ValueError as e:
+        # If no USB device information is found,
+        # it's likely not a USB serial port
+        raise ValueError(f"{port} cannot be reset via USB reset. {e}")
