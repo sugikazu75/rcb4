@@ -134,14 +134,21 @@ class RCB4ROSBridge(object):
             JointState,
             queue_size=1)
 
-        if rospy.get_param('~device', None):
-            self.interface = ARMH7Interface.from_port(
-                rospy.get_param('~device', None))
-        elif rospy.get_param('~use_rcb4'):
-            self.interface = RCB4Interface()
-            self.interface.auto_open()
-        else:
-            self.interface = ARMH7Interface.from_port()
+        while not rospy.is_shutdown():
+            try:
+                if rospy.get_param('~device', None):
+                    self.interface = ARMH7Interface.from_port(
+                        rospy.get_param('~device', None))
+                elif rospy.get_param('~use_rcb4'):
+                    self.interface = RCB4Interface()
+                    self.interface.auto_open()
+                else:
+                    self.interface = ARMH7Interface.from_port()
+                break
+            except serial.SerialException as e:
+                rospy.logerr('Waiting for the port to become available. {}'
+                             .format(e))
+            rospy.sleep(1.0)
         if self.interface is None:
             rospy.logerr('Could not open port!')
             sys.exit(1)
