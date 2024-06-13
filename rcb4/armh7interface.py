@@ -714,12 +714,55 @@ class ARMH7Interface(object):
         return param_values
 
     def read_stretch(self, servo_ids=None):
+        """Returns servo motor stretch value.
+
+        'Stretch' refers to the holding force of the servo's output shaft.
+        Increasing this value strengthens the holding force, while decreasing
+        it weakens the force, allowing for a softer, more flexible state
+        similar to human joints. Setting an appropriate value can help absorb
+        shocks during activities like walking, maintaining balance by reducing
+        impact when the foot contacts the ground.
+
+        Parameters
+        ----------
+        servo_ids : List[int]
+            List of servo ID whose stretch value is to be read.
+            If None, read the stretch values of all connected servo motors.
+
+        Returns
+        -------
+        List[int]
+            List of stretch values corresponding to servo_ids.
+        """
         if servo_ids is None:
             servo_ids = self.servo_sorted_ids
         return [self.servo_param64(sid, ['stretch_gain'])['stretch_gain'] // 2
                 for sid in servo_ids]
 
     def send_stretch(self, value=127, servo_ids=None):
+        """Write stretch value to servo motor.
+
+        'Stretch' refers to the holding force of the servo's output shaft.
+        Increasing this value strengthens the holding force, while decreasing
+        it weakens the force, allowing for a softer, more flexible state
+        similar to human joints. Setting an appropriate value can help absorb
+        shocks during activities like walking, maintaining balance by reducing
+        impact when the foot contacts the ground.
+
+        Parameters
+        ----------
+        value : int
+            Stretch value
+        servo_ids : List[int]
+            List of servo ID whose stretch value is to be sent.
+            If None, write the stretch values to all connected servo motors.
+
+        Returns
+        -------
+        List[int]
+            If b'\x12\x06' (which contains ACK) is returned, command succeed.
+            If b'\x12\x15' (which contains NCK) is returned, command fail.
+        """
         if servo_ids is None:
             servo_ids = self.servo_sorted_ids
         if not isinstance(value, list) or not isinstance(value, tuple):
