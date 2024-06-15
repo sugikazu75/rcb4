@@ -31,7 +31,11 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
         self.stretch_client = actionlib.SimpleActionClient(
             namespace + '/kxr_fullbody_controller/stretch_interface',
             StretchAction)
-        self.stretch_client.wait_for_server()
+        timeout = rospy.Duration(10.0)
+        self.enabled_stretch = True
+        if not self.stretch_client.wait_for_server(timeout):
+            rospy.logerr("Stretch action server not available.")
+            self.enabled_stretch = False
         self.stretch_topic_name = namespace \
             + '/kxr_fullbody_controller/stretch'
 
@@ -63,6 +67,9 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
         client.send_goal(goal)
 
     def send_stretch(self, value=127, joint_names=None):
+        if not self.enabled_stretch:
+            rospy.logerr('Stretch action server not available.')
+            return
         if joint_names is None:
             joint_names = self.joint_names
         goal = StretchGoal()
@@ -75,6 +82,9 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
         client.send_goal(goal)
 
     def read_stretch(self):
+        if not self.enabled_stretch:
+            rospy.logerr('Stretch action server not available.')
+            return
         return rospy.wait_for_message(
             self.stretch_topic_name, Stretch)
 
