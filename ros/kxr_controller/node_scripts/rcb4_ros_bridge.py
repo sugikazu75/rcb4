@@ -392,7 +392,10 @@ class RCB4ROSBridge(object):
                 continue
             joint_names.append(joint_name)
             servo_ids.append(self.joint_name_to_id[joint_name])
-        stretch = self.interface.read_stretch(servo_ids=servo_ids)
+        try:
+            stretch = self.interface.read_stretch(servo_ids=servo_ids)
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[read_stretch] {}'.format(str(e)))
         stretch_msg = Stretch(
             joint_names=joint_names,
             stretch=stretch
@@ -411,8 +414,11 @@ class RCB4ROSBridge(object):
             servo_ids.append(self.joint_name_to_id[joint_name])
         # Send new stretch
         stretch = goal.stretch
-        self.interface.send_stretch(
-            value=stretch, servo_ids=servo_ids)
+        try:
+            self.interface.send_stretch(
+                value=stretch, servo_ids=servo_ids)
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[send_stretch] {}'.format(str(e)))
         # Return result
         self.publish_stretch()
         rospy.loginfo(
