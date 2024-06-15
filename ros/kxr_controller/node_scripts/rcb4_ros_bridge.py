@@ -211,7 +211,7 @@ class RCB4ROSBridge(object):
             auto_start=False)
         self.servo_on_off_server.start()
 
-        # TODO (someone) support rcb-4 miniboard
+        # TODO(someone) support rcb-4 miniboard
         if not rospy.get_param('~use_rcb4'):
             self.stretch_server = actionlib.SimpleActionServer(
                 clean_namespace
