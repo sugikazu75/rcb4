@@ -61,8 +61,8 @@
                                        kxr_controller::ServoOnOffAction
                                        :groupname groupname))
    (setq stretch-client (instance ros::simple-action-client :init
-                                  (if namespace (format nil "/~A/~A/stretch_real_interface" namespace controller-name)
-                                    (format nil "/~A/stretch_real_interface" controller-name))
+                                  (if namespace (format nil "/~A/~A/stretch_interface" namespace controller-name)
+                                    (format nil "/~A/stretch_interface" controller-name))
                                   kxr_controller::StretchAction
                                   :groupname groupname))
    (dolist (action (list servo-on-off-client stretch-client))

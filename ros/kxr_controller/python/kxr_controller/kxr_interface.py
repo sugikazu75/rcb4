@@ -29,7 +29,7 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
             ServoOnOffAction)
         self.servo_on_off_client.wait_for_server()
         self.stretch_client = actionlib.SimpleActionClient(
-            namespace + '/kxr_fullbody_controller/stretch_real_interface',
+            namespace + '/kxr_fullbody_controller/stretch_interface',
             StretchAction)
         self.stretch_client.wait_for_server()
         self.stretch_topic_name = namespace \

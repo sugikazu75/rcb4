@@ -213,7 +213,7 @@ class RCB4ROSBridge(object):
 
         self.stretch_server = actionlib.SimpleActionServer(
             clean_namespace
-            + '/kxr_fullbody_controller/stretch_real_interface',
+            + '/kxr_fullbody_controller/stretch_interface',
             StretchAction,
             execute_cb=self.stretch_callback,
             auto_start=False)
