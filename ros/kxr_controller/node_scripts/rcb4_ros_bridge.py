@@ -211,21 +211,23 @@ class RCB4ROSBridge(object):
             auto_start=False)
         self.servo_on_off_server.start()
 
-        self.stretch_server = actionlib.SimpleActionServer(
-            clean_namespace
-            + '/kxr_fullbody_controller/stretch_interface',
-            StretchAction,
-            execute_cb=self.stretch_callback,
-            auto_start=False)
-        self.stretch_server.start()
-        self.stretch_publisher = rospy.Publisher(
-            clean_namespace
-            + '/kxr_fullbody_controller/stretch',
-            Stretch,
-            queue_size=1,
-            latch=True)
-        rospy.sleep(0.1)
-        self.publish_stretch()
+        # TODO (someone) support rcb-4 miniboard
+        if not rospy.get_param('~use_rcb4'):
+            self.stretch_server = actionlib.SimpleActionServer(
+                clean_namespace
+                + '/kxr_fullbody_controller/stretch_interface',
+                StretchAction,
+                execute_cb=self.stretch_callback,
+                auto_start=False)
+            self.stretch_server.start()
+            self.stretch_publisher = rospy.Publisher(
+                clean_namespace
+                + '/kxr_fullbody_controller/stretch',
+                Stretch,
+                queue_size=1,
+                latch=True)
+            rospy.sleep(0.1)
+            self.publish_stretch()
 
         self.proc_controller_spawner = subprocess.Popen(
             [f'/opt/ros/{os.environ["ROS_DISTRO"]}/bin/rosrun',
