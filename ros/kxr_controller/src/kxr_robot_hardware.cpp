@@ -59,6 +59,12 @@ namespace kxr_controller {
       robot_hw_nh.getParam(clean_namespace + "/initial_position/" + jointname, joint_position_command_[i]);
       robot_hw_nh.getParam(clean_namespace + "/initial_position/" + jointname, joint_state_position_[i]);
 
+      if (joint->mimic) {
+        mimic_joint_map_[jointname] = joint->mimic->joint_name;
+        mimic_joint_multiplier_[jointname] = joint->mimic->multiplier;
+        mimic_joint_offset_[jointname] = joint->mimic->offset;
+      }
+
       hardware_interface::JointStateHandle state_handle(jointname, &joint_state_position_[i], &joint_state_velocity_[i], &joint_state_effort_[i]);
       joint_state_interface.registerHandle(state_handle);
       hardware_interface::JointHandle pos_handle(joint_state_interface.getHandle(jointname), &joint_position_command_[i]);
@@ -87,19 +93,32 @@ namespace kxr_controller {
     return true;
   }
 
-  void KXRRobotHW::read(const ros::Time& time, const ros::Duration& period)
-  {
+  void KXRRobotHW::read(const ros::Time& time, const ros::Duration& period) {
     if (!joint_state_received_) {
       return;
     }
     for (size_t i = 0; i < current_joint_state_.name.size(); ++i) {
       size_t idx = jointname_to_id_[current_joint_state_.name[i]];
-      if (i < current_joint_state_.position.size())
+      if (i < current_joint_state_.position.size()) {
         joint_state_position_[idx] = current_joint_state_.position[i];
-      if (i < current_joint_state_.velocity.size())
+      }
+      if (i < current_joint_state_.velocity.size()) {
         joint_state_velocity_[idx] = current_joint_state_.velocity[i];
-      if (i < current_joint_state_.effort.size())
+      }
+      if (i < current_joint_state_.effort.size()) {
         joint_state_effort_[idx] = current_joint_state_.effort[i];
+      }
+    }
+
+    // update mimic joint
+    for (const auto& mimic_pair : mimic_joint_map_) {
+      const std::string& mimic_joint_name = mimic_pair.first;
+      const std::string& original_joint_name = mimic_pair.second;
+      size_t mimic_idx = jointname_to_id_[mimic_joint_name];
+      size_t original_idx = jointname_to_id_[original_joint_name];
+      joint_state_position_[mimic_idx] = joint_state_position_[original_idx] * mimic_joint_multiplier_[mimic_joint_name] + mimic_joint_offset_[mimic_joint_name];
+      joint_state_velocity_[mimic_idx] = joint_state_velocity_[original_idx] * mimic_joint_multiplier_[mimic_joint_name];
+      joint_state_effort_[mimic_idx] = joint_state_effort_[original_idx];
     }
   }
 
