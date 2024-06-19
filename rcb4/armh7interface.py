@@ -357,7 +357,7 @@ class ARMH7Interface(object):
 
     def cfunc_call(self, func_string, *args):
         addr = self.armh7_address[func_string]
-        argc = len(*args)
+        argc = len(args)
         n = 8 + 4 * argc
         byte_list = bytearray(n)
         byte_list[0] = n
@@ -365,7 +365,8 @@ class ARMH7Interface(object):
         byte_list[2:6] = int(addr).to_bytes(4, byteorder='little')
         byte_list[6] = argc
         for i in range(argc):
-            byte_list[7 + i * 4] = int(args[i]).to_bytes(4, byteorder='little')
+            byte_list[7 + i * 4:7 + (i + 1) * 4] = int(args[i]).to_bytes(
+                4, byteorder='little')
         byte_list[n - 1] = rcb4_checksum(byte_list[0:n-1])
         return self.serial_write(byte_list)
 
@@ -575,7 +576,7 @@ class ARMH7Interface(object):
 
     def idmode_scan(self):
         self.ics_stop()
-        self.cfunc_call('servo_idmode_scan', [])
+        self.cfunc_call('servo_idmode_scan')
         self.ics_start()
 
         self.servo_sorted_ids = None
@@ -963,14 +964,14 @@ class ARMH7Interface(object):
             np.zeros(max_sensor_num))
 
     def buzzer(self):
-        return self.cfunc_call('buzzer_init_sound', [])
+        return self.cfunc_call('buzzer_init_sound')
 
     def write_to_flash(self):
         # The operation write_to_flash is time-consuming,
         # hence the default_timeout is temporarily extended.
         default_timeout = self._default_timeout
         self._default_timeout = 5.0
-        ret = self.cfunc_call('rom_to_flash', [])
+        ret = self.cfunc_call('rom_to_flash')
         self._default_timeout = default_timeout
         return ret
 
@@ -988,7 +989,7 @@ class ARMH7Interface(object):
         self.cstruct_slot(DataAddress, 'src_addr', float(faddr[0]) + offset)
         self.cstruct_slot(DataAddress, 'dst_addr', addr)
         self.cstruct_slot(DataAddress, 'copy_size', cls.size)
-        return self.cfunc_call('dataflash_to_dataram', [])
+        return self.cfunc_call('dataflash_to_dataram')
 
     def databssram_to_dataflash(self):
         self.set_data_address()
@@ -1000,7 +1001,7 @@ class ARMH7Interface(object):
         # hence the default_timeout is temporarily extended.
         default_timeout = self._default_timeout
         self._default_timeout = 5.0
-        ret = self.cfunc_call('dataram_to_dataflash', [])
+        ret = self.cfunc_call('dataram_to_dataflash')
         self._default_timeout = default_timeout
         return ret
 
