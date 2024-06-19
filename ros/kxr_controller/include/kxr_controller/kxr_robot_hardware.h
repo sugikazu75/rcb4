@@ -36,6 +36,10 @@ namespace kxr_controller {
     hardware_interface::PositionJointInterface joint_position_interface;
     hardware_interface::VelocityJointInterface joint_velocity_interface;
 
+    std::map<std::string, std::string> mimic_joint_map_;
+    std::map<std::string, double> mimic_joint_multiplier_;
+    std::map<std::string, double> mimic_joint_offset_;
+
     ros::Duration control_loop_period_;
     bool joint_state_received_;
     std::map<std::string, unsigned int> jointname_to_id_;
