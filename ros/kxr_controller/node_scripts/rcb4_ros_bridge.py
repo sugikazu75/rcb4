@@ -381,6 +381,8 @@ class RCB4ROSBridge(object):
         except RuntimeError as e:
             self.unsubscribe()
             rospy.signal_shutdown('Disconnected {}.'.format(e))
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[servo_on_off] {}'.format(str(e)))
         return self.servo_on_off_server.set_succeeded(ServoOnOffResult())
 
     def publish_stretch(self):
