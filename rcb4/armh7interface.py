@@ -252,10 +252,13 @@ class ARMH7Interface(object):
         start_time = time.time()
         read_data = b''
         while True:
-            ready, _, _ = select.select(
-                [self.serial], [], [], timeout - (time.time() - start_time))
-            if not ready:
+            remain_time = timeout - (time.time() - start_time)
+            if remain_time <= 0:
                 raise serial.SerialException("Timeout: No data received.")
+            ready, _, _ = select.select(
+                [self.serial], [], [], remain_time)
+            if not ready:
+                continue
 
             chunk = self.serial.read(self.serial.in_waiting or 1)
             if not chunk:
