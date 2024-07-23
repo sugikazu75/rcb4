@@ -5,6 +5,8 @@ import os.path as osp
 import shlex
 import subprocess
 import sys
+import tempfile
+import xml.etree.ElementTree as ET
 
 import actionlib
 import geometry_msgs.msg
@@ -55,6 +57,32 @@ def load_yaml(file_path, Loader=yaml.SafeLoader):
         else:
             joint_name_to_id[name] = data[name]['id']
     return joint_name_to_id, data
+
+
+def make_urdf_file(joint_name_to_id):
+    robot = ET.Element('robot', {
+        'name': 'dummy_robot',
+        'xmlns:xi': 'http://www.w3.org/2001/XInclude'
+    })
+
+    ET.SubElement(robot, 'link', name='base_link')
+    previous_link_name = 'base_link'
+
+    for joint_name in joint_name_to_id.keys():
+        link_name = f"{joint_name}_link"
+        ET.SubElement(robot, 'link', name=link_name)
+
+        joint = ET.SubElement(robot, 'joint', name=joint_name,
+                              type='continuous')
+        ET.SubElement(joint, 'parent', link=previous_link_name)
+        ET.SubElement(joint, 'child', link=link_name)
+
+        previous_link_name = link_name
+
+    tmp_urdf_file = tempfile.mktemp(suffix='.urdf')
+    tree = ET.ElementTree(robot)
+    tree.write(tmp_urdf_file, encoding='utf-8', xml_declaration=True)
+    return tmp_urdf_file
 
 
 def run_robot_state_publisher(namespace=None):
@@ -109,14 +137,19 @@ class RCB4ROSBridge(object):
         self.proc_robot_state_publisher = None
         self.proc_kxr_controller = None
 
+        servo_config_path = rospy.get_param('~servo_config_path')
+        self.joint_name_to_id, servo_infos = load_yaml(servo_config_path)
+
         r = RobotModel()
-        urdf_path = rospy.get_param('~urdf_path')
+        urdf_path = rospy.get_param('~urdf_path', None)
+        tmp_urdf = False
+        if urdf_path is None:
+            urdf_path = make_urdf_file(self.joint_name_to_id)
+            tmp_urdf = True
+            rospy.loginfo("Use temporary URDF")
         with open(urdf_path) as f:
             with no_mesh_load_mode():
                 r.load_urdf_file(f)
-
-        servo_config_path = rospy.get_param('~servo_config_path')
-        self.joint_name_to_id, servo_infos = load_yaml(servo_config_path)
 
         joint_list = [j for j in r.joint_list
                       if j.__class__.__name__ != 'FixedJoint']
@@ -131,6 +164,9 @@ class RCB4ROSBridge(object):
         set_robot_description(
             urdf_path,
             param_name=clean_namespace + '/robot_description')
+        if tmp_urdf:
+            os.remove(urdf_path)
+
         set_joint_state_controler()
         self.current_joint_states_pub = rospy.Publisher(
             clean_namespace + '/current_joint_states',
