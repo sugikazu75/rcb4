@@ -173,6 +173,7 @@ class RCB4ROSBridge(object):
             JointState,
             queue_size=1)
 
+        self.interface = None
         while not rospy.is_shutdown():
             try:
                 if rospy.get_param('~device', None):
