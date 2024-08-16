@@ -35,7 +35,7 @@
 
 (defclass kxr-interface
   :super robot-interface
-  :slots (joint-names servo-on-off-client controller-name))
+  :slots (joint-names servo-on-off-client controller-name control-pressure))
 
 
 (defmethod kxr-interface
@@ -46,6 +46,7 @@
                          (format nil "/~A/joints" c-name)))
           (pressure-param (if namespace (format nil "~A/rcb4_ros_bridge/control_pressure" namespace)
                             (format nil "/rcb4_ros_bridge/control_pressure"))))
+     (setq control-pressure (ros::get-param pressure-param nil))
      (setq controller-name (cadr (memq :controller-name args)))
      (setq joint-names (ros::get-param joint-param nil))
      (while (and (ros::ok) (null joint-names))
@@ -67,7 +68,6 @@
                                     (format nil "/~A/stretch_interface" controller-name))
                                   kxr_controller::StretchAction
                                   :groupname groupname))
-   (setq control-pressure (ros::get-param pressure-param nil))
    (when control-pressure
      (setq pressure-control-client (instance ros::simple-action-client :init
                                              (if namespace (format nil "/~A/~A/pressure_control_interface" namespace controller-name)
