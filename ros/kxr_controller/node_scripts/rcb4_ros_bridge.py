@@ -267,7 +267,8 @@ class RCB4ROSBridge(object):
                 StretchAction,
                 execute_cb=self.stretch_callback,
                 auto_start=False)
-            # Avoid 'rospy.exceptions.ROSException: publish() to a closed topic'
+            # Avoid 'rospy.exceptions.ROSException:
+            # publish() to a closed topic'
             rospy.sleep(0.1)
             self.stretch_server.start()
             self.stretch_publisher = rospy.Publisher(
@@ -276,7 +277,8 @@ class RCB4ROSBridge(object):
                 Stretch,
                 queue_size=1,
                 latch=True)
-            # Avoid 'rospy.exceptions.ROSException: publish() to a closed topic'
+            # Avoid 'rospy.exceptions.ROSException:
+            # publish() to a closed topic'
             rospy.sleep(0.1)
             self.publish_stretch()
 
@@ -519,7 +521,8 @@ class RCB4ROSBridge(object):
                             + '/kjs/{}/{}/{}'.format(sensor.id, typ, i),
                             geometry_msgs.msg.WrenchStamped,
                             queue_size=1)
-                        # Avoid 'rospy.exceptions.ROSException: publish() to a closed topic'
+                        # Avoid 'rospy.exceptions.ROSException:
+                        # publish() to a closed topic'
                         rospy.sleep(0.1)
                     msg.header.frame_id = 'kjs_{}_{}_frame'.format(
                         sensor.id, i)
