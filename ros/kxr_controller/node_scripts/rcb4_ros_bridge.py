@@ -601,7 +601,7 @@ class RCB4ROSBridge(object):
 
     @property
     def average_pressure(self):
-        return sum(self.recent_pressures) / self.recent_pressures.maxlen
+        return sum(self.recent_pressures) / len(self.recent_pressures)
 
     def release_vacuum(self, idx):
         """Connect work to air.
