@@ -326,7 +326,7 @@ class RCB4ROSBridge(object):
                 # Record 1 seconds pressure data.
                 hz = rospy.get_param(
                     self.clean_namespace + '/control_loop_rate', 20)
-                self.recent_pressures = deque([], maxlen=1*hz)
+                self.recent_pressures = deque([], maxlen=1*int(hz))
 
         self.proc_controller_spawner = subprocess.Popen(
             [f'/opt/ros/{os.environ["ROS_DISTRO"]}/bin/rosrun',
