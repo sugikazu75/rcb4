@@ -463,6 +463,66 @@ class ARMH7Interface(object):
             ServoStruct, slot_name='error_angle')[servo_ids]
         return error_angles
 
+    def adjust_angle_vector(self, servo_ids=None, error_threshold=None):
+        """Stop servo motor when joint error become large.
+
+        This function stops servo motor when the error between reference angle
+        vector and current angle vector exceeds error threshold.
+
+        Parameters
+        ----------
+        servo_ids : array_like
+            Array of error check target servo IDs. Each ID corresponds to a
+            specific servo.
+        Error threshold : int or float
+            Error threshold angle [deg].
+
+        Returns
+        -------
+        bool
+            Return True when adjustment occurs.
+        """
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        # Ignore free servo
+        servo_ids = servo_ids[
+            self.reference_angle_vector(servo_ids=servo_ids) != 32768]
+        if len(servo_ids) == 0:
+            return
+
+        # Calculate error threshold[deg]
+        if error_threshold is None:
+            error_threshold = 5
+        if isinstance(error_threshold, (int, float)):
+            error_threshold = [error_threshold for _ in range(len(servo_ids))]
+        assert isinstance(error_threshold, list), \
+            'error_threshold must be None or list'
+        assert len(servo_ids) == len(error_threshold), \
+            'length of error_threshold and avs must be equal'
+        error_threshold = np.array(error_threshold, np.float32)
+
+        # Find servo whose angle exceeds error threshold
+        current_av = self.angle_vector(servo_ids=servo_ids)
+        reference_servo_av = self.reference_angle_vector(servo_ids=servo_ids)
+        reference_av = self.servo_angle_vector_to_angle_vector(
+            reference_servo_av, servo_ids)
+        error_av = current_av - reference_av
+        error_indice = abs(error_av) > error_threshold
+        error_ids = servo_ids[error_indice]
+
+        # Stop motion
+        if len(error_ids) > 0:
+            print(f'Servo {error_ids} error {error_av[error_indice]}[deg]'
+                  f' exceeds threshold {error_threshold[error_indice]}[deg].')
+            print('Stop motion by overriding reference angle vector with'
+                  'current angle vector.')
+            all_servo_ids = self.search_servo_ids()
+            self.servo_angle_vector(
+                all_servo_ids,
+                servo_vector=self._angle_vector()[all_servo_ids])
+            return True
+        return False
+
     def servo_id_to_index(self, servo_id):
         if self.valid_servo_ids([servo_id]):
             return self.sequentialized_servo_ids([servo_id])[0]
