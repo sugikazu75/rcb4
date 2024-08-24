@@ -474,7 +474,7 @@ class ARMH7Interface(object):
         servo_ids : array_like
             Array of error check target servo IDs. Each ID corresponds to a
             specific servo.
-        Error threshold : int or float
+        error_threshold : int or float
             Error threshold angle [deg].
 
         Returns
@@ -498,7 +498,7 @@ class ARMH7Interface(object):
         assert isinstance(error_threshold, list), \
             'error_threshold must be None or list'
         assert len(servo_ids) == len(error_threshold), \
-            'length of error_threshold and avs must be equal'
+            'length of servo_ids and error_threshold must be equal'
         error_threshold = np.array(error_threshold, np.float32)
 
         # Find servo whose angle exceeds error threshold
