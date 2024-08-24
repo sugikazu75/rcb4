@@ -1,3 +1,4 @@
+import numbers
 from pathlib import Path
 import platform
 import select
@@ -474,7 +475,7 @@ class ARMH7Interface(object):
         servo_ids : array_like
             Array of error check target servo IDs. Each ID corresponds to a
             specific servo.
-        error_threshold : int or float
+        error_threshold : None or numbers.Number or numpy.ndarray
             Error threshold angle [deg].
 
         Returns
@@ -493,13 +494,13 @@ class ARMH7Interface(object):
         # Calculate error threshold[deg]
         if error_threshold is None:
             error_threshold = 5
-        if isinstance(error_threshold, (int, float)):
-            error_threshold = [error_threshold for _ in range(len(servo_ids))]
-        assert isinstance(error_threshold, list), \
-            'error_threshold must be None or list'
+        if isinstance(error_threshold, numbers.Number):
+            error_threshold = np.full(
+                len(servo_ids), error_threshold, dtype=np.float32)
+        assert isinstance(error_threshold, np.ndarray), \
+            'error_threshold must be np.ndarray'
         assert len(servo_ids) == len(error_threshold), \
             'length of servo_ids and error_threshold must be equal'
-        error_threshold = np.array(error_threshold, np.float32)
 
         # Find servo whose angle exceeds error threshold
         current_av = self.angle_vector(servo_ids=servo_ids)
