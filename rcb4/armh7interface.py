@@ -1,3 +1,4 @@
+import numbers
 from pathlib import Path
 import platform
 import select
@@ -463,6 +464,66 @@ class ARMH7Interface(object):
             ServoStruct, slot_name='error_angle')[servo_ids]
         return error_angles
 
+    def adjust_angle_vector(self, servo_ids=None, error_threshold=None):
+        """Stop servo motor when joint error become large.
+
+        This function stops servo motor when the error between reference angle
+        vector and current angle vector exceeds error threshold.
+
+        Parameters
+        ----------
+        servo_ids : array_like
+            Array of error check target servo IDs. Each ID corresponds to a
+            specific servo.
+        error_threshold : None or numbers.Number or numpy.ndarray
+            Error threshold angle [deg].
+
+        Returns
+        -------
+        bool
+            Return True when adjustment occurs.
+        """
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        # Ignore free servo
+        servo_ids = servo_ids[
+            self.reference_angle_vector(servo_ids=servo_ids) != 32768]
+        if len(servo_ids) == 0:
+            return
+
+        # Calculate error threshold[deg]
+        if error_threshold is None:
+            error_threshold = 5
+        if isinstance(error_threshold, numbers.Number):
+            error_threshold = np.full(
+                len(servo_ids), error_threshold, dtype=np.float32)
+        assert isinstance(error_threshold, np.ndarray), \
+            'error_threshold must be np.ndarray'
+        assert len(servo_ids) == len(error_threshold), \
+            'length of servo_ids and error_threshold must be equal'
+
+        # Find servo whose angle exceeds error threshold
+        current_av = self.angle_vector(servo_ids=servo_ids)
+        reference_servo_av = self.reference_angle_vector(servo_ids=servo_ids)
+        reference_av = self.servo_angle_vector_to_angle_vector(
+            reference_servo_av, servo_ids)
+        error_av = current_av - reference_av
+        error_indices = abs(error_av) > error_threshold
+        error_ids = servo_ids[error_indices]
+
+        # Stop motion
+        if len(error_ids) > 0:
+            print(f'Servo {error_ids} error {error_av[error_indices]}[deg]'
+                  f' exceeds threshold {error_threshold[error_indices]}[deg].')
+            print('Stop motion by overriding reference angle vector with'
+                  'current angle vector.')
+            all_servo_ids = self.search_servo_ids()
+            self.servo_angle_vector(
+                all_servo_ids,
+                servo_vector=self._angle_vector()[all_servo_ids])
+            return True
+        return False
+
     def servo_id_to_index(self, servo_id):
         if self.valid_servo_ids([servo_id]):
             return self.sequentialized_servo_ids([servo_id])[0]
@@ -508,8 +569,8 @@ class ARMH7Interface(object):
         all_servo_ids = self.search_servo_ids()
         if len(all_servo_ids) == 0:
             return np.empty(shape=0)
-        av = np.append(self._angle_vector()[all_servo_ids], 1)
-        av = np.matmul(av.T, self.actuator_to_joint_matrix.T)[:-1]
+        av = self.servo_angle_vector_to_angle_vector(
+            self._angle_vector()[all_servo_ids], all_servo_ids)
         worm_av = self.read_cstruct_slot_vector(
             WormmoduleStruct, slot_name='present_angle')
         for worm_idx in self.search_worm_ids():
@@ -520,6 +581,21 @@ class ARMH7Interface(object):
                 return np.empty(shape=0)
             av = av[self.sequentialized_servo_ids(servo_ids)]
         return av
+
+    def servo_angle_vector_to_angle_vector(self, servo_av, servo_ids=None):
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        if len(servo_av) != len(servo_ids):
+            raise ValueError(
+                'Length of servo_ids and angle_vector must be the same.')
+        if len(servo_ids) == 0:
+            return np.empty(shape=0)
+        seq_indices = self.sequentialized_servo_ids(servo_ids)
+        tmp_servo_av = np.append(np.zeros(len(self.servo_sorted_ids)), 1)
+        tmp_servo_av[seq_indices] = np.array(servo_av)
+        tmp_av = np.matmul(
+            tmp_servo_av.T, self.actuator_to_joint_matrix.T)[:-1]
+        return tmp_av[seq_indices]
 
     def angle_vector_to_servo_angle_vector(self, av, servo_ids=None):
         if servo_ids is None:
