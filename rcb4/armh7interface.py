@@ -507,13 +507,13 @@ class ARMH7Interface(object):
         reference_av = self.servo_angle_vector_to_angle_vector(
             reference_servo_av, servo_ids)
         error_av = current_av - reference_av
-        error_indice = abs(error_av) > error_threshold
-        error_ids = servo_ids[error_indice]
+        error_indices = abs(error_av) > error_threshold
+        error_ids = servo_ids[error_indices]
 
         # Stop motion
         if len(error_ids) > 0:
-            print(f'Servo {error_ids} error {error_av[error_indice]}[deg]'
-                  f' exceeds threshold {error_threshold[error_indice]}[deg].')
+            print(f'Servo {error_ids} error {error_av[error_indices]}[deg]'
+                  f' exceeds threshold {error_threshold[error_indices]}[deg].')
             print('Stop motion by overriding reference angle vector with'
                   'current angle vector.')
             all_servo_ids = self.search_servo_ids()
