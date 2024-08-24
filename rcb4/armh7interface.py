@@ -508,8 +508,8 @@ class ARMH7Interface(object):
         all_servo_ids = self.search_servo_ids()
         if len(all_servo_ids) == 0:
             return np.empty(shape=0)
-        av = np.append(self._angle_vector()[all_servo_ids], 1)
-        av = np.matmul(av.T, self.actuator_to_joint_matrix.T)[:-1]
+        av = self.servo_angle_vector_to_angle_vector(
+            self._angle_vector()[all_servo_ids], all_servo_ids)
         worm_av = self.read_cstruct_slot_vector(
             WormmoduleStruct, slot_name='present_angle')
         for worm_idx in self.search_worm_ids():
@@ -520,6 +520,21 @@ class ARMH7Interface(object):
                 return np.empty(shape=0)
             av = av[self.sequentialized_servo_ids(servo_ids)]
         return av
+
+    def servo_angle_vector_to_angle_vector(self, servo_av, servo_ids=None):
+        if servo_ids is None:
+            servo_ids = self.search_servo_ids()
+        if len(servo_av) != len(servo_ids):
+            raise ValueError(
+                'Length of servo_ids and angle_vector must be the same.')
+        if len(servo_ids) == 0:
+            return np.empty(shape=0)
+        seq_indices = self.sequentialized_servo_ids(servo_ids)
+        tmp_servo_av = np.append(np.zeros(len(self.servo_sorted_ids)), 1)
+        tmp_servo_av[seq_indices] = np.array(servo_av)
+        tmp_av = np.matmul(
+            tmp_servo_av.T, self.actuator_to_joint_matrix.T)[:-1]
+        return tmp_av[seq_indices]
 
     def angle_vector_to_servo_angle_vector(self, av, servo_ids=None):
         if servo_ids is None:
