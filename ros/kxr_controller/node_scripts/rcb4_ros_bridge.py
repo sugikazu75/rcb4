@@ -726,6 +726,9 @@ class RCB4ROSBridge(object):
         except IndexError as e:
             rospy.logerr('[publish_joint_states] {}'.format(str(e)))
             return
+        except ValueError as e:
+            rospy.logerr('[publish_joint_states] {}'.format(str(e)))
+            return
         except serial.serialutil.SerialException as e:
             rospy.logerr('[publish_joint_states] {}'.format(str(e)))
             return
