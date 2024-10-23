@@ -11,8 +11,8 @@ import threading
 import xml.etree.ElementTree as ET
 
 import actionlib
-import geometry_msgs.msg
 from dynamic_reconfigure.server import Server
+import geometry_msgs.msg
 from kxr_controller.cfg import KXRParameteresConfig as Config
 from kxr_controller.msg import PressureControl
 from kxr_controller.msg import PressureControlAction
