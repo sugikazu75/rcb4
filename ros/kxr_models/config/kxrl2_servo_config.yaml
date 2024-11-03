@@ -1,0 +1,18 @@
+joint_name_to_servo_id: {
+  rarm_shoulder_p: {'id': 5, 'offset': 45},
+  rarm_shoulder_r: {'id': 9, 'direction': -1, 'offset': -90},
+  rarm_elbow_p: {'id': 13, 'direction': -1},
+  larm_shoulder_p: {'id': 2, 'direction': 45},
+  larm_shoulder_r: {'id': 6, 'direction': -1, 'offset': -90},
+  larm_elbow_p: {'id': 10, 'direction': -1},
+  rleg_crotch_r: {'id': 17, 'direction': -1},
+  rleg_crotch_p: {'id': 21, 'offset': -7.82608695652},  # 360/(2*23)
+  rleg_knee_p: {'id': 25, 'direction': -1, 'offset': -70},
+  rleg_ankle_p: {'id': 29, 'direction': -1, 'offset': 12.1739130435},
+  rleg_ankle_r: 33,
+  lleg_crotch_r: {'id': 14, 'direction': -1},
+  lleg_crotch_p: {'id': 18, 'offset': -7.82608695652},  # 360/(2*23)
+  lleg_knee_p: {'id': 22, 'direction': -1, 'offset': -70}, # TODO: set correct offset. 70 is not correct
+  lleg_ankle_p: {'id': 26, 'direction': -1, 'offset': 12.1739130435}, # 20 - 360/(2*23)TODO: set corrrect offset. 20 is not correct
+  lleg_ankle_r: 30
+}

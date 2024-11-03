@@ -1,7 +1,7 @@
 <launch>
 
-  <arg name="urdf_path" default="$(find kxr_models)/urdf/kxrl2l2a6h2m.urdf" />
-  <arg name="servo_config_path" default="$(find kxr_models)/config/kxrl2l2a6h2m_servo_config.yaml" />
+  <arg name="urdf_path" default="$(find kxr_l2)/urdf/kxr_l2.urdf" />
+  <arg name="servo_config_path" default="$(find kxr_models)/config/kxrl2_servo_config.yaml" />
   <arg name="namespace" default="" />
   <arg name="publish_imu" default="true" />
   <arg name="publish_sensor" default="false" />
