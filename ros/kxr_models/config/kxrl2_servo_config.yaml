@@ -7,12 +7,12 @@ joint_name_to_servo_id: {
   larm_elbow_p: {'id': 10, 'direction': -1},
   rleg_crotch_r: {'id': 17, 'direction': -1},
   rleg_crotch_p: {'id': 21, 'offset': -7.82608695652},  # 360/(2*23)
-  rleg_knee_p: {'id': 25, 'direction': -1, 'offset': -70},
-  rleg_ankle_p: {'id': 29, 'direction': -1, 'offset': 12.1739130435},
+  rleg_knee_p: {'id': 25, 'direction': -1, 'offset': -66.09},
+  rleg_ankle_p: {'id': 29, 'direction': -1, 'offset': 16.0839130435},
   rleg_ankle_r: 33,
   lleg_crotch_r: {'id': 14, 'direction': -1},
   lleg_crotch_p: {'id': 18, 'offset': -7.82608695652},  # 360/(2*23)
-  lleg_knee_p: {'id': 22, 'direction': -1, 'offset': -70}, # TODO: set correct offset. 70 is not correct
-  lleg_ankle_p: {'id': 26, 'direction': -1, 'offset': 12.1739130435}, # 20 - 360/(2*23)TODO: set corrrect offset. 20 is not correct
+  lleg_knee_p: {'id': 22, 'direction': -1, 'offset': -66.09}, # 90 - 23.91
+  lleg_ankle_p: {'id': 26, 'direction': -1, 'offset': 16.0839130435}, # 23.91 - 360/(2*23)
   lleg_ankle_r: 30
 }
